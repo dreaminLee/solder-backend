@@ -8,4 +8,5 @@ samples_path = Path(configs["samples_path"])
 samples_path.mkdir(exist_ok=True)
 classifier_path = Path(configs["classifier_path"])
 recognizer_path = Path(configs["recognizer_path"])
+fontfile_path = Path(configs["fontfile_path"])
 train_size = configs["train_size"]
