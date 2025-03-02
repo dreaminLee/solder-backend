@@ -1,0 +1,6 @@
+{
+    "samples_path": "sample",
+    "classifier_path": "haarcascade_frontalface_default.xml",
+    "recognizer_path": "recognizer.yml",
+    "train_size": 60
+}
