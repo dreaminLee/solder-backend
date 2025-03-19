@@ -37,15 +37,34 @@ class Alarm(db.Model):
 
     ID =  db.Column(db.Integer, primary_key=True, autoincrement=True)
     AlarmText =  db.Column(db.String(100), nullable=False)
-    DateTime =  db.Column(db.DateTime, nullable=False)
-    Type = db.Column(db.String(10), nullable=True)
+    StartTime =  db.Column(db.DateTime, nullable=True)
+    EndTime = db.Column(db.DateTime, nullable=True)
+    Kind = db.Column(db.String(10), nullable=True)
 
     def to_dict(self):
         return {
             'id': self.ID,
             'alarm_text': self.AlarmText,
-            'datetime': self.DateTime,
-            'type':self.Type
+            'start_time': self.StartTime,
+            'end_time': self.EndTime,
+            'kind':self.Kind
+        }
+#模式预约表
+class Order(db.Model):
+    __tablename__ = 'order'
+    ID = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    OrderUser = db.Column(db.String(100))  # 预约人
+    OrderDateTime = db.Column(db.DateTime)  # 预约开工时间
+    OrderUserID = db.Column(db.Integer)  # 预约人ID
+    DateTime = db.Column(db.DateTime)  # 预约时间
+
+    def to_dict(self):
+        return {
+            'id': self.ID,
+            'order_user': self.OrderUser,
+            'order_datetime': self.OrderDateTime.strftime('%Y-%m-%d %H:%M:%S') if self.OrderDateTime else None,
+            'order_user_id': self.OrderUserID,
+            'datetime': self.DateTime.strftime('%Y-%m-%d %H:%M:%S')
         }
 
 class Solder(db.Model):
@@ -55,6 +74,7 @@ class Solder(db.Model):
     Model = db.Column(db.String(100), nullable=False)  # 型号
     StationID = db.Column(db.Integer, nullable=False)  # 所在工位
     ExpireDate = db.Column(db.DateTime, nullable=False)  # 过期日期
+    ProductDate = db.Column(db.DateTime, nullable=False)  # 生产日期
     BackLCTimes = db.Column(db.Integer)  # 回冷藏区次数
     Common2 = db.Column(db.String(100))  # 通用2
     Common3 = db.Column(db.String(100))  # 通用3
@@ -84,6 +104,7 @@ class Solder(db.Model):
             'solder_code': self.SolderCode,
             'model': self.Model,
             'station_id': self.StationID,
+            'product_date': None if self.ProductDate is None else self.ProductDate.strftime('%Y-%m-%d'),
             'expire_date': None if self.ExpireDate is None else self.ExpireDate.strftime('%Y-%m-%d'),
             'BackLCTimes': self.BackLCTimes,
             'common2': self.Common2,
@@ -160,6 +181,50 @@ class SolderModel(db.Model):
             'twice_in_ku': self.TwiceInKu
         }
 
+
+class Barcoderule(db.Model):
+    __tablename__ = 'barcoderule'
+
+    ID = db.Column(db.Integer, primary_key=True)
+    ModelStartLab = db.Column(db.Integer, default=None)
+    ModelEndLab = db.Column(db.Integer, default=None)
+    ModelStart = db.Column(db.Integer, default=None)
+    ModelLength = db.Column(db.Integer, default=None)
+    ShelfLifeStart = db.Column(db.Integer, default=None)
+    ShelfLifeLength = db.Column(db.Integer, default=None)
+    ShelfLifeStartLab = db.Column(db.Integer, default=None)
+    ShelfLifeEndLab = db.Column(db.Integer, default=None)
+    ProductTimeStart = db.Column(db.Integer, default=None)
+    ProductTimeLength = db.Column(db.Integer, default=None)
+    ExpTimeStart = db.Column(db.Integer, default=None)
+    ExpTimeLength = db.Column(db.Integer, default=None)
+    CodeStart = db.Column(db.Integer, default=None)
+    CodeLength = db.Column(db.Integer, default=None)
+    CodeStartLab = db.Column(db.Integer, default=None)
+    CodeEndLab = db.Column(db.Integer, default=None)
+    Length = db.Column(db.Integer, default=None)
+
+    def to_dict(self):
+        return {
+            'ID': self.ID,
+            'ModelStartLab': self.ModelStartLab,
+            'ModelEndLab': self.ModelEndLab,
+            'ModelStart': self.ModelStart,
+            'ModelLength': self.ModelLength,
+            'ShelfLifeStart': self.ShelfLifeStart,
+            'ShelfLifeLength': self.ShelfLifeLength,
+            'ShelfLifeStartLab': self.ShelfLifeStartLab,
+            'ShelfLifeEndLab': self.ShelfLifeEndLab,
+            'ProductTimeStart': self.ProductTimeStart,
+            'ProductTimeLength': self.ProductTimeLength,
+            'ExpTimeStart': self.ExpTimeStart,
+            'ExpTimeLength': self.ExpTimeLength,
+            'CodeStart': self.CodeStart,
+            'CodeLength': self.CodeLength,
+            'CodeStartLab': self.CodeStartLab,
+            'CodeEndLab': self.CodeEndLab,
+            "Length" : self.Length,
+        }
 
 
 class TemperatureRecord(db.Model):
