@@ -40,7 +40,7 @@ app.register_blueprint(system_bp, url_prefix='/system')
 if __name__ == '__main__':
     logging.getLogger('sqlalchemy.engine.Engine').setLevel(logging.WARNING)  # 禁用所有 SQL 语句日志
     logging.getLogger('sqlalchemy.engine.base.Engine').setLevel(logging.WARNING)  # 禁用低级日志
-
+    # 1234555
     # 启动温度数据插入任务
     start_periodic_insertion()
     app.run(debug=True)
