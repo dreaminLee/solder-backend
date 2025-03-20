@@ -616,6 +616,19 @@ def move_update(mode):
                 modbus_client.modbus_write("jcq", location, 140, 1)
                 # modbus_client.write_ascii_string(145, res_asc)
 
+                # 读取 user_cache.txt 中的 UserID
+                user_cache_file = "user_cache.txt"
+                with open(user_cache_file, "r") as file:
+                    user_id = file.read()
+                user_name=""
+                if user_id:
+                    # 查询 User 表中的 UserName
+                    user = session.query(User).filter_by(UserID=user_id).first()
+                    if user:
+                        user_name = user.UserName
+                    else:
+                        user_name = "未知用户"  # 如果没有找到对应用户，可以设置为默认值
+
                 # 查询是否已经存在相同的 SolderCode 数据
                 existing_solder = session.query(Solder).filter(Solder.SolderCode == code).first()
                 if existing_solder and (existing_solder.StationID==190 or existing_solder.Station.StationID==191):
@@ -625,20 +638,7 @@ def move_update(mode):
                     existing_solder.ProductDate = productDate
                     existing_solder.BackLCTimes += 1
                     existing_solder.StorageDateTime = datetime.now()
-
-                    # 读取 user_cache.txt 中的 UserID
-                    user_cache_file = "user_cache.txt"
-                    with open(user_cache_file, "r") as file:
-                        user_id = file.read()
-
-                    if user_id:
-                        # 查询 User 表中的 UserName
-                        user = session.query(User).filter_by(UserID=user_id).first()
-                        if user:
-                            user_name = user.UserName
-                        else:
-                            user_name = "未知用户"  # 如果没有找到对应用户，可以设置为默认值
-
+                    if user_name:
                         # 创建 SolderFlowRecord 记录
                         solder_flow_record = SolderFlowRecord(
                             SolderCode=code,
@@ -649,7 +649,6 @@ def move_update(mode):
                         )
                         session.add(solder_flow_record)
                         session.commit()
-
                     # 提交更新的 Solder 数据
                     session.commit()
                     solder_data.append(existing_solder)
@@ -660,23 +659,12 @@ def move_update(mode):
                         SolderCode=code,
                         Model=model,
                         ProductDate=productDate,
+                        StorageUser=user_name,
                         BackLCTimes=0,
                         StationID=190,
                         StorageDateTime=datetime.now()
                     )
-                    # 读取 user_cache.txt 中的 UserID
-                    user_cache_file = "user_cache.txt"
-                    with open(user_cache_file, "r") as file:
-                        user_id = file.read()
-
-                    if user_id:
-                        # 查询 User 表中的 UserName
-                        user = session.query(User).filter_by(UserID=user_id).first()
-                        if user:
-                            user_name = user.UserName
-                        else:
-                            user_name = "未知用户"  # 如果没有找到对应用户，可以设置为默认值
-
+                    if user_name:
                         # 创建 SolderFlowRecord 记录
                         solder_flow_record = SolderFlowRecord(
                             SolderCode=code,
@@ -687,7 +675,6 @@ def move_update(mode):
                         )
                         session.add(solder_flow_record)
                         session.commit()
-
                     session.add(sql_data)
                     session.commit()
                     solder_data.append(sql_data)
@@ -785,22 +772,12 @@ def move_update(mode):
                                 # logger.info(f"SolderCode {code} 和 StationID {station_fang} 已存在，正在更新数据。")
                                 existing_record.StorageDateTime = datetime.now()
                                 session.commit()
-                                # modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                                # modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                                # modbus_client.modbus_write("jcq", result[0], 107, 1)
-                                # logger.info(f"预约:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
-                                # logger.info(f"Solder 数据已更新：SolderCode={code}, StationID={station_fang}")
                             elif existing_record.SolderCode == code:
                                 # 如果只有 SolderCode 存在，更新 StationID 和 StorageDateTimedianwei
                                 # logger.info(f"SolderCode {code} 已存在，正在更新 StationID 和数据。")
                                 existing_record.StationID = station_fang
                                 existing_record.StorageDateTime = datetime.now()
                                 session.commit()
-                                # modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                                # modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                                # modbus_client.modbus_write("jcq", result[0], 107, 1)
-                                # logger.info(f"预约:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
-                                # logger.info(f"Solder 数据已更新：SolderCode={code}, StationID={station_fang}")
                             elif existing_record.StationID == station_fang:
                                 # 如果只有 StationID 存在，更新 SolderCode 和数据
                                 # logger.info(f"StationID {station_fang} 已存在，正在更新 SolderCode 和数据。")
@@ -1218,6 +1195,7 @@ def lc_mode():
                 code = res_asc
                 parts = code.split('+')
                 model = parts[4] if len(parts) > 4 else None
+
                 # 查询是否已经存在相同的 SolderCode 数据
                 existing_solder = session.query(Solder).filter(Solder.SolderCode == code).first()
                 if existing_solder and (existing_solder.StationID == 190 or existing_solder.Station.StationID == 191):
