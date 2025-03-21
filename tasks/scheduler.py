@@ -520,46 +520,38 @@ def move_update(mode):
     huiwen_daiqu = True  # 给变量一个初始值，避免未赋值的情况
     lengcang_huiwen = True  # 同样处理另一个变量
     session = db_instance.get_session()
-    #solders = session.query(Solder).all()
     # 查询所有非预约的 Solder 数据
     solders = session.query(Solder).filter(Solder.OrderDateTime==None).all()
     # 假设 solder 是字典列表，每个字典有一个 'StationID' 键
     timeout_cache = set()
     solder_fang_station_cache=0
+    solder_qu_station_cache = 0
+    # #用于取完成之后缓存取出来的锡膏信息
+    # solder_cache=[]
+
     for item in solders:
         if modbus_client.modbus_read('jcq',item.StationID,1)[0] == 6:
             timeout_cache.add(item.StationID)
-    # 查询所有 Station 数据
-    #stations = session.query(Station).all()
     # 查询非预约专用点位的 Station 数据
     stations = session.query(Station).filter(Station.StationID.notin_([601,602,801,802]) ).all()
-
     # 根据 StaType 和 StationID 创建字典
     StaType_station_dict = {station.StaType: station.StationID for station in stations}
 
     # 提取所需字段（Model 和 StationID），并确保 StationID 转换为整数,用于下面统计回温和待取的锡膏个数
-    # solder_data = [
-    #     {"Model": solder.Model, "StationID": solder.StationID}  # 转换为整数
-    #     for solder in solders if 601 <= solder.StationID <= 840  # 在筛选时也确保转换为整数
-    # ]
     solder_data = [
         {"Model": solder.Model, "StationID": solder.StationID}  # 转换为整数
         for solder in solders if (603 <= solder.StationID <= 660) or (803<= solder.StationID<=840)  # 在筛选时也确保转换为整数
     ]
-
     # 查询所有 SolderModel 数据并构建字典 {Model: SolderModel 对象}
     solder_model_dict = {
         model_data.Model: model_data
         for model_data in session.query(SolderModel).all()
     }
     # 统计每个 Model 在不同区间（601-660 和 801-840）内的数量
-    # count_by_model = defaultdict(lambda: {"count_601_660": 0, "count_801_840": 0})
     count_by_model = defaultdict(lambda: {"count_603_660": 0, "count_803_840": 0})
-
     for solder in solder_data:  # 遍历列表中的字典
         model = solder['Model']
         station_id = solder['StationID']
-
         # 判断 StationID 是否在指定区间
         if 603 <= station_id <= 660:
             count_by_model[model]["count_603_660"] += 1
@@ -574,8 +566,6 @@ def move_update(mode):
             location = modbus_client.modbus_read("jcq", 110, 1)[0]
             # res_asc = modbus_client.read_float_ASCII(115, 134)
             res_asc = scan()
-            # 提取字母和数字部分
-            # res_asc = re.sub(r'[^a-zA-Z0-9&.-]', '', res_asc)
             # 清空文件内容
             with open(file_path, "w") as file:
                 file.truncate(0)
@@ -584,13 +574,7 @@ def move_update(mode):
                 file.write(res_asc)
             logger.info(f"读到条码{res_asc}")
             if check_string2(res_asc):
-                # modbus_client.modbus_write("jcq", 1, 141, 1)
-                # modbus_client.modbus_write("jcq", location, 140, 1)
-                # modbus_client.write_ascii_string(145, res_asc)
-                # elif station_qu == 190 or station_qu == 191:
-                #     with open(file_path, "r") as file:
-                #         code = file.read()
-                    # 提取型号：在第一个 '&' 和第二个 '&' 之间
+                # 提取型号、生产日期
                 code=res_asc
                 parts = code.split('+')
                 model = parts[4] if len(parts) > 4 else None
@@ -636,7 +620,8 @@ def move_update(mode):
                     existing_solder.SolderCode = code
                     existing_solder.Model = model
                     existing_solder.ProductDate = productDate
-                    existing_solder.BackLCTimes += 1
+                    existing_solder.InTimes += 1
+                    existing_solder.StorageUser = user_name
                     existing_solder.StorageDateTime = datetime.now()
                     if user_name:
                         # 创建 SolderFlowRecord 记录
@@ -654,14 +639,17 @@ def move_update(mode):
                     solder_data.append(existing_solder)
                     logger.info(f"当前Station存在锡膏，已更新 Solder 扫码入库：{code}")
                 else:
+                    #查询此前该锡膏的入柜次数
+                    inTimes=session.query(SolderFlowRecord).join(Solder,Solder.SolderCode==SolderFlowRecord.SolderCode).filter(SolderFlowRecord.Type=="请求入柜").count()
                     # 插入新的 Solder 数据
                     sql_data = Solder(
                         SolderCode=code,
                         Model=model,
                         ProductDate=productDate,
-                        StorageUser=user_name,
+                        InTimes=inTimes+1,
                         BackLCTimes=0,
                         StationID=190,
+                        StorageUser=user_name,
                         StorageDateTime=datetime.now()
                     )
                     if user_name:
@@ -712,16 +700,20 @@ def move_update(mode):
         logger.info(f"打算放到点位{station_fang}中")
         if result[0] == 2:  # 取完成
             if station_qu:
-
+                # solder_record = session.query(Solder).filter(Solder.StationID == station_qu).first()
+                # #先把取出来的锡膏缓存
+                # solder_record.StationID=None
+                # session.query(Solder).filter(Solder.StationID == station_qu).update({Solder.StaionID:None})
+                # session.commit()
+                # solder_cache.append(solder_record)
+                # solder_flag=session.query(Solder).filter(Solder.StationID == station_qu).all()
+                # flag=True if solder_flag else False
+                # logger.info(f"成功从{station_qu}取出锡膏，现在{station_qu}中是否还有锡膏：{flag}")
                 if station_qu>=201 and station_qu<=539: #从冷藏区取出，准备出库
                     session.query(Solder).filter(Solder.StationID == station_qu).update({
                         Solder.ReadyOutDateTime: datetime.now() #准备出库时间，用来回冷藏
                     }, synchronize_session=False)
                     session.commit()
-                    # modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                    # modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                    # modbus_client.modbus_write("jcq", result[0], 107, 1)
-                    # logger.info(f"取完成:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
 
                 if station_qu >= 603 and station_qu <= 660:
                     solder_record = session.query(Solder).filter(Solder.StationID == station_qu).first()
@@ -732,16 +724,12 @@ def move_update(mode):
                             modbus_client.write_float(solder_model_record.StirSpeed,1522)
                             modbus_client.write_float(solder_model_record.StirTime,1526)
                             logger.info(f"{solder_record.SolderCode}在搅拌区设置搅拌参数成功 时间{solder_model_record.StirSpeed}速度{solder_model_record.StirTime}")
-                            # modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                            # modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                            # modbus_client.modbus_write("jcq", result[0], 107, 1)
-                            # logger.info(f"取完成:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
                         else:
                             logger.error(f"{solder_record.SolderCode}在搅拌区设置搅拌参数出错 未找到solder_model_record")
                 modbus_client.modbus_write("jcq", qu[0], 105, 1)
                 modbus_client.modbus_write("jcq", fang[0], 106, 1)
                 modbus_client.modbus_write("jcq", result[0], 107, 1)
-                logger.info(f"预约:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
+                logger.info(f"状态{result[0]} :从{qu[0]}移动到{fang[0]}")
 
             else:
                 logger.error(f"没有找到符合 StaType '{station_qu}' 的 StationID")
@@ -750,8 +738,16 @@ def move_update(mode):
             if station_qu and station_fang:
                 modbus_client.modbus_write('jcq', 0, station_fang,1)
                 modbus_client.modbus_write("jcq", 1, station_qu, 1)
+                station_qu_status=modbus_client.modbus_read("jcq", station_qu,1)[0]
+                station_fang_status = modbus_client.modbus_read("jcq", station_fang, 1)[0]
+                logger.info(f"{station_qu}点位的状态：{station_qu_status}")
+                logger.info(f"{station_fang}点位的状态：{station_fang_status}")
                 solder_fang_station_cache=station_fang
+                solder_qu_station_cache = station_qu
+                logger.info(f"正在从{station_qu}往{station_fang}放，把这2个点位缓存起来{solder_qu_station_cache}、{solder_fang_station_cache}")
                 solder_record = next((solder for solder in solders if solder.StationID == station_qu), None)
+                # solder_record=solder_cache[0]
+                # solder_cache.pop(0)
                 # logger.info(f"1----------------{solder_record}")
                 if solder_record:
                     code = solder_record.SolderCode  # 使用查询到的 SolderCode
@@ -777,6 +773,8 @@ def move_update(mode):
                                 # logger.info(f"SolderCode {code} 已存在，正在更新 StationID 和数据。")
                                 existing_record.StationID = station_fang
                                 existing_record.StorageDateTime = datetime.now()
+                                if station_fang in range(201,540):
+                                    existing_record.BackLCTimes += 1
                                 session.commit()
                             elif existing_record.StationID == station_fang:
                                 # 如果只有 StationID 存在，更新 SolderCode 和数据
@@ -784,39 +782,43 @@ def move_update(mode):
                                 existing_record.SolderCode = code
                                 existing_record.StorageDateTime = datetime.now()
                                 session.commit()
-                                # modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                                # modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                                # modbus_client.modbus_write("jcq", result[0], 107, 1)
-                                # logger.info(f"预约:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
-                                # logger.info(f"Solder 数据已更新：SolderCode={code}, StationID={station_fang}")
                         else:
                             # 如果不存在相同的 SolderCode 和 StationID，插入新数据
+                            inTimes=session.query(SolderFlowRecord).join(Solder,Solder.SolderCode==SolderFlowRecord.SolderCode).filter(SolderFlowRecord.Type=="请求入柜").count()
+                            # 读取 user_cache.txt 中的 UserID
+                            user_cache_file = "user_cache.txt"
+                            with open(user_cache_file, "r") as file:
+                                user_id = file.read()
+                            user_name = ""
+                            if user_id:
+                                # 查询 User 表中的 UserName
+                                user = session.query(User).filter_by(UserID=user_id).first()
+                                if user:
+                                    user_name = user.UserName
+                                else:
+                                    user_name = "未知用户"  # 如果没有找到对应用户，可以设置为默认值
                             sql_data = Solder(
                                 SolderCode=code,
                                 Model=solder_record.Model,
+                                InTimes=inTimes+1,
                                 BackLCTimes=0,
                                 StationID=station_fang,
+                                StorageUser=user_name,
                                 StorageDateTime=datetime.now()
                             )
                             session.add(sql_data)
                             session.commit()  # 提交新记录
-                            # modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                            # modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                            # modbus_client.modbus_write("jcq", result[0], 107, 1)
-                            # logger.info(f"预约:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
-                            # logger.info(f"新Solder数据添加成功：SolderCode={code}, StationID={station_fang}")
-                        # 放冷藏区,写入库记录,而且要更改入柜次数
+
+                        # 放冷藏区,写入库记录
                         if 201 <= station_fang <= 539:
                             solder = session.query(Solder).filter(
                                 Solder.SolderCode == solder_record.SolderCode).first()
-
                             # 更新 SolderFlowRecord 表中的 Type 字段为 '入柜'
                             # 查询到最新的 SolderFlowRecord 记录
                             # logger.info(f"4----------------入柜")
                             solder_flow_record = session.query(SolderFlowRecord).filter(
                                 SolderFlowRecord.SolderCode == code).order_by(
                                 SolderFlowRecord.DateTime.desc()).first()
-                            enterLCTimes = (session.query(SolderFlowRecord).filter(SolderFlowRecord.SolderCode == code, SolderFlowRecord.Type == "入柜").count())
                             # logger.info(f"5----------------{solder_flow_record}")
                             if solder_flow_record:  # 确保找到了记录
                                 # 更新实例的字段
@@ -825,18 +827,13 @@ def move_update(mode):
                                 logger.info("发送冷冻日志s")
                                 # send_freeze_log(rid=code,user_login=None)
                                 logger.info("发送冷冻日志e")
+
                             else:
-                                logger.warning("===============入柜状态4：未找到solderflowrecord===============")
-                            if solder:
-                                solder.BackLCTimes = enterLCTimes + 1
-                                logger.info(f"{solder.Code}的入库次数：{solder.BackLCTimes}")
-                                session.commit()  # 提交更改
-                            else:
-                                logger.error(f"BackLCTimes 自增出错，未找到条码{solder_record.SolderCode}")
+                                logger.warning("===============入柜状态4：未找到solderflowrecord,即该锡膏之前未入库过===============")
+
                         # 放回温区
                         if 603 <= station_fang <= 660:
                             logger.info("发送回温日志")
-                            # send_reheat_log(rid=code, user_login=None)
                             logger.info("发送回温日志")
                         session.commit()
                         modbus_client.modbus_write("jcq", qu[0], 105, 1)
@@ -851,11 +848,6 @@ def move_update(mode):
                         # 捕获其他异常
                         session.rollback()
                         logger.error(f"发生错误：{e}")
-                    # session.commit()
-                    # modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                    # modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                    # modbus_client.modbus_write("jcq", result[0], 107, 1)
-                    # logger.info(f"放完成:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
                 else:
                     logger.error(f"没有找到 StationID 等于 '{station_qu}' 的 Solder 记录")
             else:
@@ -954,9 +946,12 @@ def move_update(mode):
                             # 检查是否超时
                             if local_time > out_timeout_threshold:
                                 logger.info(
-                                    f"触发自动超时冷藏--出库超时：库位号{int(solder.StationID)} || 出库时间{ready_out_time} || 超时阈值{out_timeout_threshold.strftime('%Y-%m-%d %H:%M:%S %z')} || 设定超时时间{model_data.OutChaoshiAutoLc}小时"
+                                    f"触发自动超时冷藏--出库超时：该锡膏的型号{solder.Model} || 库位号{int(solder.StationID)} || 出库时间{ready_out_time} || 超时阈值{out_timeout_threshold.strftime('%Y-%m-%d %H:%M:%S %z')} || 设定超时时间{model_data.OutChaoshiAutoLc}小时"
                                 )
                                 out_chaoshi_auto_lc_times = getattr(model_data, "OutChaoshiAutoLcTimes", None)
+                                logger.info(
+                                    f"锡膏{solder.SolderCode}的型号：{solder.Model}，该型号的允许冷藏区的最大次数为：{out_chaoshi_auto_lc_times}")
+
                                 flag=modbus_client.modbus_read("jcq",int(solder.StationID), 1)[0]
                                 #5是回冷藏，6是异常
                                 if flag!=5 and flag!=6:
@@ -974,10 +969,13 @@ def move_update(mode):
                                     else:
                                         if start == 601:  # 回温区给状态 5
                                             modbus_client.modbus_write("jcq", 5, int(solder.StationID), 1)
+                                            logger.info(f"锡膏{solder.SolderCode}在点位{solder.StationID}上达到了自动回冷藏的时间")
                                         else:  # 待取区，若搅拌后回冰柜，给 5，否则 6
                                             if_back_after_jiaoban = getattr(model_data, "IfBackAfterJiaoban", None)
                                             if int(if_back_after_jiaoban) == 1:
                                                 modbus_client.modbus_write("jcq", 5, int(solder.StationID), 1)
+                                                logger.info(
+                                                    f"锡膏{solder.SolderCode}在点位{solder.StationID}上达到了自动回冷藏的时间")
                                             else:
                                                 if solder.MesError is None:
                                                     error_message=""
@@ -1010,10 +1008,13 @@ def move_update(mode):
                                     Solder.Model==model_data.Model,
                                     Solder.StorageDateTime <= local_time - timedelta(hours=getattr(model_data, check_field))
                                     )
-                            .order_by(Solder.BackLCTimes.desc())
+                            .order_by(Solder.InTimes.desc())
                             .limit(amount)
                         )
-                        modbus_value =2 if solder in ok_solders else 0
+                        if solder.OutDateTime == None:
+                            modbus_value = 2 if solder in ok_solders else 0
+                        else:
+                            modbus_value = 12 if solder in ok_solders else 10
                         modbus_client.modbus_write("jcq", modbus_value, int(solder.StationID), 1)
                         logger.info(
                             f"状态变换：{region_name} || 存储时间{solder.StorageDateTime} || 冷藏结束时间{local_time - timedelta(hours=getattr(model_data, check_field))} || 点位{int(solder.StationID)} || 写入值{modbus_value}"
@@ -1023,7 +1024,7 @@ def move_update(mode):
                 for solder, model_data in solder_data:
                     if int(solder.StationID) in timeout_cache:
                         continue
-                    if model_data:
+                    if model_data :
                         solder_storage_time = solder.StorageDateTime
                         if solder_storage_time.tzinfo is None:
                             solder_storage_time = pytz.UTC.localize(solder_storage_time)
@@ -1043,7 +1044,11 @@ def move_update(mode):
                             minutes=getattr(model_data, check_field) if check_field == "RewarmTime" else 0
                         )
                         check_threshold = local_time - time_delta
+                        # if solder_qu_station_cache == 0:
                         modbus_value = 2 if solder_storage_time <= check_threshold else 0
+                        # else:
+                        #     modbus_value = 1
+                        #     logger.info(f"{solder.StationID}正在往待取区放，不用再判断它的状态了，{solder_qu_station_cache}")
                         logger.info(
                             f"状态变换：{region_name} || 存储时间{solder_storage_time} || 回温结束时间{check_threshold} || 点位{int(solder.StationID)} || 写入值{modbus_value}"
                         )
@@ -1499,7 +1504,7 @@ def init_scheduler(app):
     #     scheduler.add_job(id='move_update', func=move_update, trigger='interval', seconds=2, max_instances=100,kwargs={'mode': mode})
     # else:
     #     scheduler.add_job(id='move_update', func=move_update, trigger='interval', seconds=2, max_instances=100,kwargs={'mode': mode})
-    scheduler.add_job(id='run_scheduler', func=run_scheduler, trigger='interval', seconds=2, max_instances=100)
+    scheduler.add_job(id='run_scheduler', func=run_scheduler, trigger='interval', seconds=2, max_instances=1)
     if not scheduler.running:
         # 确保调度器正在运行，如果不是可以重启调度器或处理该情况
         scheduler.start()
