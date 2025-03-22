@@ -13,7 +13,7 @@ from sqlalchemy import or_
 
 from modbus.client import modbus_client
 from modbus.scan import scan
-from models import Station, Solder, SolderModel, SolderFlowRecord, User
+from models import Station, Solder, SolderModel, SolderFlowRecord, User, Alarm
 from util.MES_request import schedule_get_token, send_freeze_log, send_reheat_log, send_mix_log
 from util.db_connection import db_instance
 from util.logger import logger
@@ -73,6 +73,14 @@ def process_solders():
     for item in solders:
         if modbus_client.modbus_read('jcq',item.StationID,1)[0] == 6:
             timeout_cache.add(item.StationID)
+            alarm = Alarm(
+                AlarmText=f"点位异常：{item.StationID}",
+                StartTime=datetime.now(),
+                Kind="报警"
+            )
+            with db_instance.get_instance() as alarm_session:
+                alarm_session.add(alarm)
+                alarm_session.commit()
 
     # 查询所有 预约solder可用点位的Station 数据
     stations = session.query(Station).filter(
@@ -532,6 +540,14 @@ def move_update(mode):
     for item in solders:
         if modbus_client.modbus_read('jcq',item.StationID,1)[0] == 6:
             timeout_cache.add(item.StationID)
+            alarm = Alarm(
+                AlarmText=f"点位异常：{item.StationID}",
+                StartTime=datetime.now(),
+                Kind="报警"
+            )
+            with db_instance.get_instance() as alarm_session:
+                alarm_session.add(alarm)
+                alarm_session.commit()
     # 查询非预约专用点位的 Station 数据
     stations = session.query(Station).filter(Station.StationID.notin_([601,602,801,802]) ).all()
     # 根据 StaType 和 StationID 创建字典
