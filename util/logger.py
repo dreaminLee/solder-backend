@@ -21,3 +21,11 @@ logger.addHandler(file_handler)
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
+
+task_scan_logger = logging.getLogger("task_scan")
+task_scan_logger.setLevel(logging.INFO)
+task_scan_file_handler = logging.FileHandler(datetime.now().strftime("task_scan_%Y%m%d_%H%M%S.log"),
+                                             encoding="utf-8")
+task_scan_file_handler.setFormatter(formatter)
+task_scan_logger.addHandler(task_scan_file_handler)
+
