@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
 
-from router.alarm import session
 from util.db_connection import db_instance
 from face.collect import collect
 from face.detect import detect
@@ -236,7 +235,7 @@ def face_collect():
 @user_bp.route('/face_detect', methods=['POST'])
 def face_detect():
     user_id = detect()
-    if user_id is not None:
+    if user_id is not "UNKNOWN":
         mysqlAdminDO = db_instance.get_session().query(User).filter_by(UserID=user_id).first()
         access_token = create_access_token(
             identity=mysqlAdminDO.UserID,
@@ -251,4 +250,4 @@ def face_detect():
             file.write(f"{mysqlAdminDO.UserID}\n")
         return Response.SUCCESS(res_list)
     else:
-        return jsonify(Response.FAIL("识别失败"))
+        return jsonify(Response.FAIL({"message": "识别失败"}))

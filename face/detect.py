@@ -7,7 +7,7 @@ from .draw_chs import draw_chs
 from .collect import set_window_topmost
 
 classfier = cv2.CascadeClassifier(classifier_path)
-detected_threshold = 50
+detected_threshold = 30
 conf_threshold = 70
 
 def detect():

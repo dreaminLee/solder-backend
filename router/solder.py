@@ -241,53 +241,53 @@ def add_model():
     data = request.get_json()
     barcode = data.get("barcode")
 
-    if barcode:
-        result = parse_barcode(barcode)
-        model = result['型号']
-        model_sys_name = data.get('model_sys_name')
-        min_cold_num = data.get('min_cold_num')
-        rewarm_num = data.get('rewarm_num')
-        ready_out_num = data.get('ready_out_num')
-        stir_time = data.get('stir_time')
-        stir_speed = data.get('stir_speed')
-        rewarm_time = data.get('rewarm_time')
-        rewarm_max_time = data.get('rewarm_max_time')
-        ready_out_timeout = data.get('ready_out_timeout')
-        expire_date = result['到期日期']
-        product_date = result['生产日期']
-        z_offset = data.get('z_offset')
-        if_jiaoban = data.get('if_jiaoban')
-        jiaoban_rule = data.get('jiaoban_rule')
-        min_lc_time = data.get('min_lc_time')
-        out_chaoshi_auto_lc = data.get('out_chaoshi_auto_lc')
-        out_chaoshi_auto_lc_times = data.get('out_chaoshi_auto_lc_times')
-        if_back_after_jiaoban = data.get('if_back_after_jiaoban')
-        twice_chaoshi_jinzhi_in_binggui = data.get('twice_chaoshi_jinzhi_in_binggui')
-        twice_in_ku = data.get('twice_in_ku')
-        modify_datetime = datetime.now()
-    else:
-        # 获取请求数据
-        model = data.get('model')
-        model_sys_name = data.get('model_sys_name')
-        min_cold_num = data.get('min_cold_num')
-        rewarm_num = data.get('rewarm_num')
-        ready_out_num = data.get('ready_out_num')
-        stir_time = data.get('stir_time')
-        stir_speed = data.get('stir_speed')
-        rewarm_time = data.get('rewarm_time')
-        rewarm_max_time = data.get('rewarm_max_time')
-        ready_out_timeout = data.get('ready_out_timeout')
-        shelf_life = data.get('shelf_life')
-        z_offset = data.get('z_offset')
-        if_jiaoban = data.get('if_jiaoban')
-        jiaoban_rule = data.get('jiaoban_rule')
-        min_lc_time = data.get('min_lc_time')
-        out_chaoshi_auto_lc = data.get('out_chaoshi_auto_lc')
-        out_chaoshi_auto_lc_times = data.get('out_chaoshi_auto_lc_times')
-        if_back_after_jiaoban = data.get('if_back_after_jiaoban')
-        twice_chaoshi_jinzhi_in_binggui = data.get('twice_chaoshi_jinzhi_in_binggui')
-        twice_in_ku = data.get('twice_in_ku')
-        modify_datetime = datetime.now()
+    # if barcode:
+    #     result = parse_barcode(barcode)
+    #     model = result['型号']
+    #     model_sys_name = data.get('model_sys_name')
+    #     min_cold_num = data.get('min_cold_num')
+    #     rewarm_num = data.get('rewarm_num')
+    #     ready_out_num = data.get('ready_out_num')
+    #     stir_time = data.get('stir_time')
+    #     stir_speed = data.get('stir_speed')
+    #     rewarm_time = data.get('rewarm_time')
+    #     rewarm_max_time = data.get('rewarm_max_time')
+    #     ready_out_timeout = data.get('ready_out_timeout')
+    #     expire_date = result['到期日期']
+    #     product_date = result['生产日期']
+    #     z_offset = data.get('z_offset')
+    #     if_jiaoban = data.get('if_jiaoban')
+    #     jiaoban_rule = data.get('jiaoban_rule')
+    #     min_lc_time = data.get('min_lc_time')
+    #     out_chaoshi_auto_lc = data.get('out_chaoshi_auto_lc')
+    #     out_chaoshi_auto_lc_times = data.get('out_chaoshi_auto_lc_times')
+    #     if_back_after_jiaoban = data.get('if_back_after_jiaoban')
+    #     twice_chaoshi_jinzhi_in_binggui = data.get('twice_chaoshi_jinzhi_in_binggui')
+    #     twice_in_ku = data.get('twice_in_ku')
+    #     modify_datetime = datetime.now()
+    # else:
+    # 获取请求数据
+    model = data.get('model')
+    model_sys_name = data.get('model_sys_name')
+    min_cold_num = data.get('min_cold_num')
+    rewarm_num = data.get('rewarm_num')
+    ready_out_num = data.get('ready_out_num')
+    stir_time = data.get('stir_time')
+    stir_speed = data.get('stir_speed')
+    rewarm_time = data.get('rewarm_time')
+    rewarm_max_time = data.get('rewarm_max_time')
+    ready_out_timeout = data.get('ready_out_timeout')
+    shelf_life = data.get('shelf_life')
+    z_offset = data.get('z_offset')
+    if_jiaoban = data.get('if_jiaoban')
+    jiaoban_rule = data.get('jiaoban_rule')
+    min_lc_time = data.get('min_lc_time')
+    out_chaoshi_auto_lc = data.get('out_chaoshi_auto_lc')
+    out_chaoshi_auto_lc_times = data.get('out_chaoshi_auto_lc_times')
+    if_back_after_jiaoban = data.get('if_back_after_jiaoban')
+    twice_chaoshi_jinzhi_in_binggui = data.get('twice_chaoshi_jinzhi_in_binggui')
+    twice_in_ku = data.get('twice_in_ku')
+    modify_datetime = datetime.now()
 
     # 验证必要参数
     if not all([model, model_sys_name]):
@@ -713,3 +713,12 @@ def lengcang_solder():
     # 返回查询结果
     return jsonify(Response.SUCCESS(records))
 
+@solder_bp.route('/get_model_by_barcode', methods=['POST'])
+def get_model_by_barcode():
+    data = request.get_json()
+    barcode = data.get("barcode")
+
+    if not barcode:
+        return Response.FAIL("条码不能为空")
+
+    return Response.SUCCESS(barcode)

@@ -105,7 +105,7 @@ def delete_alarm():
 
 
 # 清除所有报警信息
-@alarm_bp.route('/clear_alarms', method=["POST"])
+@alarm_bp.route('/clear_alarms', methods=["POST"])
 def clear_alarms():
     with db_instance.get_session() as session:
         num_of_rows_deleted = session.query(Alarm).delete()
