@@ -15,13 +15,11 @@ def get_solder_flow_records():
     solder_code = data.get('solder_code')
     user_id = data.get('user_id')
     record_type = data.get('record_type')
-    start_date  = data.get('start_date')
+    start_date = data.get('start_date')
     end_date = data.get('end_date')
-    # solder_code = request.args.get('solder_code')  # 锡膏码
-    # user_id = request.args.get('user_id')  # 工号
-    # record_type = request.args.get('type')  # 类型
-    # start_date = request.args.get('start_date')  # 起始日期
-    # end_date = request.args.get('end_date')  # 结束日期
+    page = data.get('page', 1)  # 默认第1页
+    page_size = data.get('page_size', 10)  # 默认每页10条
+    sort_order = data.get('sort_order', 'desc')  # 默认降序排序
 
     # 获取数据库会话
     session = db_instance.get_session()
@@ -34,8 +32,8 @@ def get_solder_flow_records():
         if solder_code:
             query = query.filter(SolderFlowRecord.SolderCode == solder_code)
 
-        # 如果有工号，添加筛选条件
-        if user_id:
+        # 如果有工号，添加筛选条件（空字符串或None时不添加筛选）
+        if user_id and user_id != '':
             query = query.filter(SolderFlowRecord.UserID == user_id)
 
         # 如果有类型，添加筛选条件
@@ -51,12 +49,17 @@ def get_solder_flow_records():
             except ValueError:
                 return (Response.FAIL("日期格式错误，正确格式为 YYYY-MM-DD"))
 
-        # 获取记录
-        records = query.all()
+        # 添加时间排序
+        if sort_order == 'asc':
+            query = query.order_by(SolderFlowRecord.DateTime.asc())
+        else:
+            query = query.order_by(SolderFlowRecord.DateTime.desc())
 
-        # 如果没有记录
-        if not records:
-            return (Response.FAIL("没有符合条件的锡膏记录"))
+        # 获取总记录数
+        total = query.count()
+
+        # 使用分页获取记录
+        records = query.offset((page - 1) * page_size).limit(page_size).all()
 
         # 将查询结果转化为字典
         record_list = [
@@ -71,8 +74,11 @@ def get_solder_flow_records():
             for record in records
         ]
 
-        # 返回成功的响应
-        return (Response.SUCCESS(record_list))
+        # 返回成功的响应，包含分页信息
+        return (Response.SUCCESS({
+            "list": record_list,
+            "total": total
+        }))
 
     except Exception as e:
         # 出现异常时回滚并返回错误

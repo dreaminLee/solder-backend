@@ -102,10 +102,6 @@ def process_solders():
                         Solder.ReadyOutDateTime: datetime.now()  # 准备出库时间，用来回冷藏
                     }, synchronize_session=False)
                     session.commit()
-                    # modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                    # modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                    # modbus_client.modbus_write("jcq", result[0], 107, 1)
-                    # logger.info(f"预约:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
 
                 if station_qu >= 601 and station_qu <= 602:
                     solder_record = session.query(Solder).filter(Solder.StationID == station_qu).first()
@@ -117,13 +113,15 @@ def process_solders():
                             modbus_client.write_float(solder_model_record.StirTime, 1526)
                             logger.info(
                                 f"{solder_record.SolderCode}在搅拌区设置搅拌参数成功 时间{solder_model_record.StirSpeed}速度{solder_model_record.StirTime}")
+                            # 从回温区取完成并给设置了搅拌参数之后，立刻会转移到搅拌区，那就把这个时刻作为搅拌开始时间StirStartDateTime
+                            session.query(Solder).filter(Solder.SolderCode == solder_record.SolderCode).update({
+                                Solder.StirStartDateTime: datetime.now()
+                            }, synchronize_session=False)
+                            session.commit()
                         else:
                             logger.error(
                                 f"{solder_record.SolderCode}在搅拌区设置搅拌参数出错 未找到solder_model_record")
-                        # modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                        # modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                        # modbus_client.modbus_write("jcq", result[0], 107, 1)
-                        # logger.info(f"预约:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
+
                 modbus_client.modbus_write("jcq", qu[0], 105, 1)
                 modbus_client.modbus_write("jcq", fang[0], 106, 1)
                 modbus_client.modbus_write("jcq", result[0], 107, 1)
@@ -243,6 +241,12 @@ def process_solders():
                         else:
                             logger.warning("===============入柜状态4：未找到solderflowrecord===============")
                     if 601 <= station_fang <= 602:
+                        # 放到回温区，那回温开始时间就从此刻算起了
+                        # 更新Solder表中这个solder_record的RewarmStartDateTime
+                        session.query(Solder).filter(Solder.SolderCode == code).update({
+                            Solder.RewarmStartDateTime: datetime.now()
+                        }, synchronize_session=False)
+                        session.commit()
                         logger.info("发送回温日志")
                         # send_reheat_log(rid=code, user_login=None)
                         logger.info("发送回温日志")
@@ -450,6 +454,11 @@ def process_solders():
                             minutes=getattr(model_data, check_field) if check_field == "RewarmTime" else 0
                         )
                         check_threshold = local_time - time_delta
+                        # 回温结束时间算出来之后，那就要填到solder表中对应的记录中去
+                        session.query(Solder).filter(Solder.SolderCode == solder.SolderCode).update({
+                            Solder.RewarmEndDateTime: check_threshold
+                        }, synchronize_session=False)
+                        session.commit()
                         modbus_value = 12 if solder_storage_time <= check_threshold else 10
                         logger.info(
                             f"状态变换：{region_name} || 存储时间{solder_storage_time} || 预约的回温结束时间{check_threshold} || 点位{int(solder.StationID)} || 写入值{modbus_value}"
@@ -833,6 +842,12 @@ def move_update(mode):
 
                         # 放回温区
                         if 603 <= station_fang <= 660:
+                            # 放到回温区，那回温开始时间就从此刻算起了
+                            # 更新Solder表中这个solder_record的RewarmStartDateTime
+                            session.query(Solder).filter(Solder.SolderCode == code).update({
+                                Solder.RewarmStartDateTime: datetime.now()
+                            }, synchronize_session=False)
+                            session.commit()
                             logger.info("发送回温日志")
                             logger.info("发送回温日志")
                         session.commit()
@@ -1044,11 +1059,12 @@ def move_update(mode):
                             minutes=getattr(model_data, check_field) if check_field == "RewarmTime" else 0
                         )
                         check_threshold = local_time - time_delta
-                        # if solder_qu_station_cache == 0:
+                        # 回温结束时间算出来之后，那就要填到solder表中对应的记录中去
+                        session.query(Solder).filter(Solder.SolderCode == solder.SolderCode).update({
+                            Solder.RewarmEndDateTime: check_threshold
+                        }, synchronize_session=False)
+                        session.commit()
                         modbus_value = 2 if solder_storage_time <= check_threshold else 0
-                        # else:
-                        #     modbus_value = 1
-                        #     logger.info(f"{solder.StationID}正在往待取区放，不用再判断它的状态了，{solder_qu_station_cache}")
                         logger.info(
                             f"状态变换：{region_name} || 存储时间{solder_storage_time} || 回温结束时间{check_threshold} || 点位{int(solder.StationID)} || 写入值{modbus_value}"
                         )

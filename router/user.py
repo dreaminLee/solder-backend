@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
+
+from router.alarm import session
 from util.db_connection import db_instance
 from face.collect import collect
 from face.detect import detect
@@ -12,6 +14,7 @@ from util import md5_util
 from util.Response import Response
 
 user_bp = Blueprint('user', __name__)
+
 
 
 @user_bp.route("/login", methods=['POST'])

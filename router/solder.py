@@ -703,6 +703,7 @@ def lengcang_solder():
         {
             "SolderCode": record.SolderCode,
             "Model": record.Model,
+            "Station": record.StationID,
             "StorageUser": record.StorageUser,
             "StorageDateTime": record.StorageDateTime.strftime("%Y-%m-%d %H:%M:%S") if record.StorageDateTime else None
         }

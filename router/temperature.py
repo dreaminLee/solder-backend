@@ -78,6 +78,8 @@ def get_temperature_records():
     data = request.get_json()
     start_date_str = data.get('start_date')
     end_date_str = data.get('end_date')
+    page = data.get('page', 1)  # 默认第1页
+    page_size = data.get('page_size', 10)  # 默认每页10条
 
     if not start_date_str or not end_date_str:
         return Response.FAIL("Missing start_date or end_date")
@@ -92,18 +94,28 @@ def get_temperature_records():
     # 创建数据库会话
     session = db_instance.get_session()
 
-    # 查询在指定日期范围内的温度记录
     try:
-        records = session.query(TemperatureRecord).filter(
+        # 构建基础查询
+        query = session.query(TemperatureRecord).filter(
             and_(
                 TemperatureRecord.DateTime >= start_date,
                 TemperatureRecord.DateTime <= end_date
             )
-        ).all()
+        )
+
+
+        # 获取总记录数
+        total = query.count()
+
+        # 使用分页获取记录
+        records = query.offset((page - 1) * page_size).limit(page_size).all()
 
         # 如果没有找到记录
         if not records:
-            return Response.FAIL("No records found for the specified date range.")
+            return Response.SUCCESS(data={
+                "list": [],
+                "total": 0
+            })
 
         # 将记录数据格式化为返回数据
         records_data = [
@@ -118,8 +130,14 @@ def get_temperature_records():
             for record in records
         ]
 
-        return Response.SUCCESS(data=records_data)
+        return Response.SUCCESS(data={
+            "list": records_data,
+            "total": total
+        })
 
     except Exception as e:
         session.rollback()  # 回滚事务
         return Response.FAIL(str(e))
+
+    finally:
+        session.close()  # 关闭会话
