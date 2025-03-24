@@ -1,7 +1,7 @@
 {
     "samples_path": "sample",
-    "classifier_path": "haarcascade_frontalface_default.xml",
-    "recognizer_path": "recognizer.yml",
-    "fontfile_path": "msyh.ttc",
-    "train_size": 60
+    "classifier_path": "./face/haarcascade_frontalface_default.xml",
+    "recognizer_path": "./face/recognizer.yml",
+    "fontfile_path": "./face/msyh.ttc",
+    "train_size": 30
 }
