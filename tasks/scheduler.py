@@ -1201,6 +1201,11 @@ def read_mode():
         return -1  # 如果文件不存在，默认返回 -1
 
 def lc_mode():
+    heart_beat=modbus_client.modbus_read('xq',574,1)
+    if heart_beat==[True]:
+        modbus_client.modbus_write('xq',[False],574,1)
+    else:
+        modbus_client.modbus_write('xq',[True],574,1)
     session = db_instance.get_session()
     # solders = process_solders(100, session)
     solders = session.query(Solder).filter(Solder.OrderDateTime==None).all()
