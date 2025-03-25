@@ -245,6 +245,10 @@ def face_detect():
         )
         access_token = f"Bearer {access_token}"
         res_list = {"token": access_token}
+        # 将 UserID 写入 user_cache.txt 文件
+        user_cache_file = "user_cache.txt"
+        with open(user_cache_file, "w") as file:
+            file.write(f"{mysqlAdminDO.UserID}\n")
         return Response.SUCCESS(res_list)
     else:
         return jsonify(Response.FAIL("识别失败"))
