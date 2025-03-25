@@ -18,6 +18,8 @@ from util.MES_request import schedule_get_token, send_freeze_log, send_reheat_lo
 from util.db_connection import db_instance
 from util.logger import logger
 
+from .task_heartbeat import task_heartbeat
+
 # 设置 APScheduler 日志级别为 WARNING
 logging.getLogger('apscheduler').setLevel(logging.WARNING)
 
@@ -515,11 +517,6 @@ def process_solders():
             #     for station_id in range(201, 539):
             #         if station_id not in solder_station_ids and station_id != solder_fang_station_cache:
             #             modbus_client.modbus_write("jcq", 11, station_id, 1)
-            heart_beat = modbus_client.modbus_read('xq', 574, 1)
-            if heart_beat == [True]:
-                modbus_client.modbus_write('xq', [False], 574, 1)
-            else:
-                modbus_client.modbus_write('xq', [True], 574, 1)
     except Exception as e:
         session.close()
         logger.error(f"Error in query_solder_and_station task: {e}")
@@ -1171,11 +1168,6 @@ def move_update(mode):
                 for station_id in range(201, 539):  # 范围 601 到 660
                     if station_id not in solder_station_ids and station_id != solder_fang_station_cache:
                         modbus_client.modbus_write("jcq", 1, station_id, 1)
-            heart_beat=modbus_client.modbus_read('xq',574,1)
-            if heart_beat==[True]:
-                modbus_client.modbus_write('xq',[False],574,1)
-            else:
-                modbus_client.modbus_write('xq',[True],574,1)
     except Exception as e:
         session.close()
         logger.error(f"Error in query_solder_and_station task: {e}")
@@ -1201,11 +1193,6 @@ def read_mode():
         return -1  # 如果文件不存在，默认返回 -1
 
 def lc_mode():
-    heart_beat=modbus_client.modbus_read('xq',574,1)
-    if heart_beat==[True]:
-        modbus_client.modbus_write('xq',[False],574,1)
-    else:
-        modbus_client.modbus_write('xq',[True],574,1)
     session = db_instance.get_session()
     # solders = process_solders(100, session)
     solders = session.query(Solder).filter(Solder.OrderDateTime==None).all()
@@ -1541,6 +1528,7 @@ def init_scheduler(app):
     #     scheduler.add_job(id='move_update', func=move_update, trigger='interval', seconds=2, max_instances=100,kwargs={'mode': mode})
     # else:
     #     scheduler.add_job(id='move_update', func=move_update, trigger='interval', seconds=2, max_instances=100,kwargs={'mode': mode})
+    scheduler.add_job(id='task_heartbeat', func=task_heartbeat, trigger='interval', seconds=1, max_instances=1)
     scheduler.add_job(id='run_scheduler', func=run_scheduler, trigger='interval', seconds=2, max_instances=1)
     if not scheduler.running:
         # 确保调度器正在运行，如果不是可以重启调度器或处理该情况
