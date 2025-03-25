@@ -1,7 +1,7 @@
 import os
 
 from flask import Blueprint, jsonify, request
-from sqlalchemy import cast, func, Integer
+from sqlalchemy import cast, func, Integer, or_
 
 from modbus.client import modbus_client
 from tasks.scheduler import file_path
@@ -231,3 +231,32 @@ def get_ruku_data():
     except Exception as e:
         # 处理异常
         return Response.FAIL({"error": "Failed to fetch ruku data"})
+
+
+@station_bp.route('/get_stations', methods=['GET'])
+def get_stations():
+    return Response.FAIL("Not implemented")
+
+
+@station_bp.route('/get_all_stations_byArea', methods=['POST'])
+def get_all_stations_by_area():
+    data = request.get_json()
+    area = data.get('area')
+    with db_instance.get_session() as session:
+        stations_query = session.query(Station)
+        if area:
+            stations_query = stations_query.filter(Station.StaArea == area)
+        stations = stations_query.all()
+        stations_data = [
+            {
+                "StaType": station.StaType,
+                "XAxis": station.XAxis,
+                "YAxis": station.YAxis,
+                "ZAxis": station.ZAxis,
+                "RAxis": station.RAxis,
+                "StaArea": station.StaArea,
+                "StationID": station.StationID
+            }
+            for station in stations
+        ]
+        return Response.SUCCESS(data=stations_data)
