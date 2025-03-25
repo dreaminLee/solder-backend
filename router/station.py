@@ -235,7 +235,20 @@ def get_ruku_data():
 
 @station_bp.route('/get_stations', methods=['GET'])
 def get_stations():
-    return Response.FAIL("Not implemented")
+    with db_instance.get_session() as session:
+        return Response.SUCCESS(
+            data=[
+                {
+                    "StaType": station.StaType,
+                    "StationID": station.StationID,
+                    "StaArea": station.StaArea
+                }
+                for station in
+                session.query().with_entities(Station.StaArea,
+                                              Station.StationID,
+                                              Station.StaType).all()
+            ]
+        )
 
 
 @station_bp.route('/get_all_stations_byArea', methods=['POST'])
