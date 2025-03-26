@@ -255,6 +255,11 @@ def write_mode():
     将模式写入 mode.txt 文件
     :param mode: 模式值（0 或 1）
     """
+    is_moving = modbus_client.modbus_read("jcq", 102, 1)[0] != 0
+    is_stiring = modbus_client.modbus_read("xq", 741, 1, unit=1)[0]
+    is_req_scan = modbus_client.modbus_read("jcq", 111, 1)[0] != 0
+    if is_moving or is_stiring or is_req_scan:
+        return Response.FAIL("设备动作中，无法更改模式")
     data = request.get_json()
     mode = data.get('mode')
     if mode not in [0, 1, 2]:
