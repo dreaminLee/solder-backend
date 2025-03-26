@@ -49,28 +49,28 @@ def task_scan():
 
     current_user_id = get_current_user()
     current_time = datetime.now()
-    new_solder = Solder(
-        SolderCode = barcode,
-        Model = model,
-        ProductDate = product_date,
-        Intimes = in_times + 1,
-        BackLCTimes = 0,
-        StationID = 190,
-        StorageUser = "",
-        StorageDateTime = current_time
-    )
-    new_solder_flow_record = SolderFlowRecord(
-        SolderCode = barcode,
-        UserID = str(current_user_id),
-        UserName = "",
-        DateTime = current_time,
-        Type = "请求入柜"
-    )
     with db_instance.get_session() as session:
         in_times = session.query (SolderFlowRecord
                          ).join  (Solder, Solder.SolderCode == SolderFlowRecord.SolderCode
                          ).filter(SolderFlowRecord.Type == "请求入柜"
                          ).count ()
+        new_solder = Solder(
+            SolderCode = barcode,
+            Model = model,
+            ProductDate = product_date,
+            Intimes = in_times + 1,
+            BackLCTimes = 0,
+            StationID = 190,
+            StorageUser = "",
+            StorageDateTime = current_time
+        )
+        new_solder_flow_record = SolderFlowRecord(
+            SolderCode = barcode,
+            UserID = str(current_user_id),
+            UserName = "",
+            DateTime = current_time,
+            Type = "请求入柜"
+        )
         current_user_name = session.query(User).filter_by(UserID=current_user_id).first()
         current_user_name = current_user_name if current_user_name else "未知用户"
         new_solder.StorageUser = current_user_name
