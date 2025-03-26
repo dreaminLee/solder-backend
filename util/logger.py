@@ -22,17 +22,18 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-task_scan_logger = logging.getLogger("task_scan")
-task_scan_logger.setLevel(logging.INFO)
-task_scan_file_handler = logging.FileHandler(datetime.now().strftime("task_scan_%Y%m%d_%H%M%S.log"),
-                                             encoding="utf-8")
-task_scan_file_handler.setFormatter(formatter)
-task_scan_logger.addHandler(task_scan_file_handler)
 
-
-modbus_logger = logging.getLogger("task_scan")
+modbus_logger = logging.getLogger("modbus")
 modbus_logger.setLevel(logging.INFO)
 modbus_file_handler = logging.FileHandler(datetime.now().strftime("modbus_%Y%m%d_%H%M%S.log"),
                                              encoding="utf-8")
 modbus_file_handler.setFormatter(formatter)
 modbus_logger.addHandler(modbus_file_handler)
+
+
+task_movement_logger = logging.getLogger("task_movement")
+task_movement_logger.setLevel(logging.INFO)
+task_movement_file_handler = logging.FileHandler(datetime.now().strftime("task_movement_%Y%m%d_%H%M%S.log"),
+                                                 encoding="utf-8")
+task_movement_file_handler.setFormatter(formatter)
+task_movement_logger.addHandler(task_movement_file_handler)
