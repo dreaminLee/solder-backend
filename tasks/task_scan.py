@@ -6,6 +6,8 @@ from models import Solder, SolderFlowRecord, User
 from util.db_connection import db_instance
 from util.logger import task_scan_logger
 
+from .read_mode import read_mode
+
 def barcode_check(barcode):
     condition_1 = barcode.count("+") >= 5
 
