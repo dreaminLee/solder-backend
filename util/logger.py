@@ -29,3 +29,10 @@ task_scan_file_handler = logging.FileHandler(datetime.now().strftime("task_scan_
 task_scan_file_handler.setFormatter(formatter)
 task_scan_logger.addHandler(task_scan_file_handler)
 
+
+modbus_logger = logging.getLogger("task_scan")
+modbus_logger.setLevel(logging.INFO)
+modbus_file_handler = logging.FileHandler(datetime.now().strftime("modbus_%Y%m%d_%H%M%S.log"),
+                                             encoding="utf-8")
+modbus_file_handler.setFormatter(formatter)
+modbus_logger.addHandler(modbus_file_handler)

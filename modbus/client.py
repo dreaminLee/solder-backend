@@ -1,121 +1,86 @@
-import logging
 import random
 import struct
 import time
 from pymodbus.client.sync import ModbusTcpClient
 import re
+from threading import Lock
 
-from util.logger import logger
+from util.logger import modbus_logger
 
-# 设置日志
-logging.basicConfig(level=logging.INFO)
+modbus_client_host = '127.0.0.1'
+
 
 class ModbusClientSingleton:
     _instance = None
-    _client = None
+    _client: ModbusTcpClient = None
+    _lock = Lock()
 
-    def __new__(cls, host='192.168.1.88', port=502):
+    def __new__(cls, host=modbus_client_host, port=502):
         """创建单例客户端，并在创建时自动连接设备"""
         if cls._instance is None:
             cls._instance = super(ModbusClientSingleton, cls).__new__(cls)
             cls._instance._client = ModbusTcpClient(host, port)
             if cls._instance._client.connect():
-                logging.info("成功连接到设备 192.168.1.88")
+                modbus_logger.info(f"成功连接到设备 {modbus_client_host}")
             else:
-                logging.error("无法连接到设备")
+                modbus_logger.error(f"无法连接到设备 {modbus_client_host}")
         return cls._instance
+
 
     def disconnect(self):
         """断开连接"""
         if self._client.is_socket_open():
             self._client.close()
-            logging.info("断开与设备的连接")
+            modbus_logger.info("断开与设备的连接")
         else:
-            logging.warning("连接已经关闭，无需再次断开")
+            modbus_logger.warning("连接已经关闭，无需再次断开")
+
 
     def is_connected(self):
         """检查是否已连接"""
         return self._client.is_socket_open()
 
+
     def modbus_read(self, type: str, address:int, count: int):
         """读取寄存器或线圈"""
-        try:
-            # address=int(address)
-            if type == "jcq":
-                # 调整寄存器地址，尝试读取 40900 开始的寄存器（确保地址是正确的）
-                result = self._client.read_holding_registers(address=address, count=count)  # 读取指定数量的寄存器
+        if type == "jcq":
+            # 调整寄存器地址，尝试读取 40900 开始的寄存器（确保地址是正确的）
+            result = self._client.read_holding_registers(address=address, count=count)  # 读取指定数量的寄存器
+            modbus_logger.info(f"read  regs: address {address:-5}  count {count:-3}  res {result.registers}")
+            return result.registers
+        else:
+            # 读取线圈的状态
+            result = self._client.read_coils(address=address, count=count)  # 读取一个线圈
+            coil_status = result.bits[:count]  # 获取线圈的状态
+            modbus_logger.info(f"read  coils: address {address:-5} count {count:-3}  res {coil_status}")
+            return coil_status
 
-                if result.isError():
-                    logging.error(f"读取寄存器失败: {result}")
-                else:
-                    # logging.info(f"读取到的寄存器数据: {result.registers}")
-                    return result.registers
-            else:
-                # 读取线圈的状态
-                result = self._client.read_coils(address=address, count=count)  # 读取一个线圈
-
-                if result.isError():
-                    logging.error(f"读取线圈失败: {result}")
-                else:
-                    coil_status = result.bits  # 获取线圈的状态
-                    # logging.info(f"线圈的状态: {coil_status}")
-                    return coil_status[:count]
-
-        except Exception as e:
-            logging.error(f"读取失败: {e}")
-        # finally:
-            # return None
-            # print("读取操作结束")
 
     def modbus_write(self, type: str, content, address:int, count: int):
         """向寄存器或线圈写入数据"""
-        try:
-            # address=int(address)
-            if type == "jcq":
-                # 向201-215 (601, 661) (801, 841) (861, 871) (891, 893)的寄存器发送随机数字0, 1或2
-                for register_address in range(address, address + count):
-                    value_to_send = content  # random.choice([0, 1, 2])  # 随机选择 0, 1 或 2
+        if type == "jcq":
+            for register_address in range(address, address + count):
+                value_to_send = content
 
-                    # 向寄存器写入数据
-                    result = self._client.write_register(register_address, value_to_send)
+                # 向寄存器写入数据
+                self._client.write_register(register_address, value_to_send)
+                modbus_logger.info(f"write regs: address {address:-5}  count {count:-3}  content {content}")
 
-                    # time.sleep(0.1)
-                    # 检查是否写入成功
-                    if result.isError():
-                        logging.error(f"写入寄存器 {register_address} 失败: {result}")
-                    # else:
-                        # logging.info(f"成功写入寄存器 {register_address} 数据: {value_to_send}")
-                return True
+        else:
+            # 向多个线圈写入数据
+            coils_to_send = content
+            self._client.write_coils(address=address, values=coils_to_send)
+            modbus_logger.info(f"write coil: address {address:-5}  count {count:-3}  content {content}")
 
-            else:
-                # 向多个线圈写入数据
-                coils_to_send = content
-                result = self._client.write_coils(address=address, values=coils_to_send)
 
-                # time.sleep(0.1)
-                if result.isError():
-                    logging.error(f"写入线圈 {address} 失败: {result}")
-                    return False
-                else:
-                    # logging.info(f"成功写入线圈 {address} 的状态: {coils_to_send}")
-                    return True
-
-        except Exception as e:
-            logging.error(f"写入失败: {e}")
-            return False
-        finally:
-            # logging.info("写入操作结束")
-            return True
-
-    def write_ascii_string(self, register_address:int, input_string:str):
+    def write_ascii_string(self, register_address: int, input_string: str):
         """
         将 ASCII 字符串写入 Modbus 寄存器
         :param register_address: 起始寄存器地址
         :param input_string: 需要写入的 ASCII 字符串
-        :return: 是否成功写入
         """
         # 计算每个字符需要的寄存器数量
-        num_registers = (len(input_string) + 1) // 2  # 每两个字符占一个寄存器，计算寄存器数量
+        # num_registers = (len(input_string) + 1) // 2  # 每两个字符占一个寄存器，计算寄存器数量
         # register_address=int(register_address)
         # 准备写入的寄存器值
         registers = []
@@ -129,44 +94,30 @@ class ModbusClientSingleton:
             registers.append(register_value)
 
         # 使用 Modbus 客户端写入寄存器
-        try:
-            result = self._client.write_registers(register_address, registers, unit=1)
-            if result.isError():
-                logging.error("写入寄存器数据时出错")
-                return False
-            return True
-        except Exception as e:
-            logging.error("写入寄存器时发生异常: %s", e)
-            return False
+        result = self._client.write_registers(register_address, registers, unit=1)
+        if result.isError():
+            modbus_logger.error(f"write_ascii_string: address {register_address: -5}  string \"{input_string}\"")
 
-    def read_float(self,address):
-        address=int(address)
+
+    def read_float(self, address: int):
         # 读取 708 和 709 寄存器的值（假设每个寄存器存储 16 位数据）
         result = self._client.read_holding_registers(address, 2, unit=1)  # 读取 2 个寄存器（708 和 709）
+        # 将寄存器值转换为字节（每个寄存器是 2 字节，16 位）
+        # `struct.pack` 将整数转换为二进制字节
+        # 以大端序方式将两个寄存器的数据转换为字节
+        byte_data = struct.pack('>HH', result.registers[1], result.registers[0])
+        float_v = struct.unpack('>f', byte_data)[0]
+        return float_v
 
-        if result.isError():
-            logging.error("读取寄存器失败！")
-        else:
-            # 将寄存器值转换为字节（每个寄存器是 2 字节，16 位）
-            # `struct.pack` 将整数转换为二进制字节
-            # 以大端序方式将两个寄存器的数据转换为字节
-            byte_data = struct.pack('>HH', result.registers[1], result.registers[0])
-            float_v = struct.unpack('>f', byte_data)[0]
-            return float_v
 
-    import struct
-    import logging
-
-    def read_float_test(self, start_address, end_address):
-        start_address = int(start_address)
-        end_address = int(end_address)
+    def read_float_test(self, start_address: int, end_address: int):
 
         if end_address < start_address:
-            logging.error("结束地址必须大于或等于起始地址！")
+            modbus_logger.error(f"read_float_test: start_address {start_address} > end_address {end_address}")
             return []
 
         # 计算需要读取的寄存器数量
-        num_registers = (end_address - start_address + 1)
+        # num_registers = (end_address - start_address + 1)
 
         # 每次读取的最大寄存器数量（设为 124）
         max_registers_per_request = 124
@@ -178,17 +129,17 @@ class ModbusClientSingleton:
             num_registers_batch = current_batch_end - i + 1
 
             # 打印当前读取的寄存器范围
-            print(f"正在读取寄存器：起始地址 {i}，结束地址 {current_batch_end}，数量 {num_registers_batch}")
+            modbus_logger.info(f"read_float_test: start_address {i}  end_address {current_batch_end}  num_registers_batch {num_registers_batch}")
 
             # 读取寄存器的值
             result = self._client.read_holding_registers(i, num_registers_batch, unit=1)
 
             if result.isError():
-                logging.error(f"读取寄存器失败！起始地址: {i}，结束地址: {current_batch_end}")
+                modbus_logger.error(f"read_float_test: start_address {i}  end_address {current_batch_end}")
                 continue  # 跳过当前批次，继续读取后续寄存器
 
             # 打印读取的寄存器值
-            print(f"读取的寄存器值：{result.registers}")
+            modbus_logger.info(f"read_float_test: result.registers {result.registers}")
 
             # 将寄存器值转换为字节，每2个寄存器为一个 float
             for j in range(0, num_registers_batch, 2):
@@ -197,9 +148,10 @@ class ModbusClientSingleton:
                 float_values.append(float_v)
 
                 # 打印转换后的浮动值
-                print(f"转换后的浮动值：{float_v}")
+                modbus_logger.info(f"read_float_test: float_v {float_v}")
 
         return float_values
+
 
     def read_float_ASCII(self, address_from: int, address_to: int):
         """
@@ -211,58 +163,47 @@ class ModbusClientSingleton:
         length = address_to - address_from + 1  # 计算要读取的寄存器数量
         result = self._client.read_holding_registers(address_from, length, unit=1)
 
-        if result.isError():
-            logger.error("读取寄存器数据时出错")
-            return None
-        else:
-            registers = result.registers  # 获取寄存器数据
+        registers = result.registers  # 获取寄存器数据
 
-            # 交换寄存器中的高字节和低字节（每个寄存器有两个字节）
-            swapped_registers = []
-            for reg in registers:
-                # 对每个寄存器中的两个字节进行交换
-                swapped_reg = ((reg >> 8) & 0xFF) | ((reg & 0xFF) << 8)
-                swapped_registers.append(swapped_reg)
+        # 交换寄存器中的高字节和低字节（每个寄存器有两个字节）
+        swapped_registers = []
+        for reg in registers:
+            # 对每个寄存器中的两个字节进行交换
+            swapped_reg = ((reg >> 8) & 0xFF) | ((reg & 0xFF) << 8)
+            swapped_registers.append(swapped_reg)
 
-            # 将寄存器值转换为字节数据（每个寄存器 2 字节）
-            byte_data = struct.pack(f'>{length}H', *swapped_registers)
+        # 将寄存器值转换为字节数据（每个寄存器 2 字节）
+        byte_data = struct.pack(f'>{length}H', *swapped_registers)
 
-            # 打印原始字节数据
-            logger.info("原始字节数据: %s", byte_data)
+        # 打印原始字节数据
+        modbus_logger.info(f"read_float_ASCII: byte_data {byte_data}")
 
-            # 解析字节数据为 ASCII 字符
-            try:
-                ascii_str = byte_data.decode('ascii')  # 假设 Modbus 返回的是 ASCII 编码字符串
-                return ascii_str
-            except UnicodeDecodeError as e:
-                logger.error("字节数据无法解码为 ASCII 字符串: %s", e)
-                return None
+        # 解析字节数据为 ASCII 字符
+        ascii_str = byte_data.decode('ascii')  # 假设 Modbus 返回的是 ASCII 编码字符串
+        return ascii_str
 
-            # try:
-            #     extracted = re.sub(r'[^a-zA-Z0-9]', '', ascii_str)
-            #     return extracted
-            # except ValueError:
-            #     logging.error("无法将 ASCII 字符串转换为浮动值: %s", ascii_str)
-            #     return None
+        # try:
+        #     extracted = re.sub(r'[^a-zA-Z0-9]', '', ascii_str)
+        #     return extracted
+        # except ValueError:
+        #     logging.error("无法将 ASCII 字符串转换为浮动值: %s", ascii_str)
+        #     return None
 
-    def write_ASCII_string_to_registers(self, address_from, address_to, ascii_string):
+
+    def write_ASCII_string_to_registers(self, address_from: int, ascii_string: str):
         """
         将 ASCII 字符串写入 Modbus 寄存器，并交换每两个字节的顺序
         :param address_from: 起始地址
-        :param address_to: 结束地址
         :param ascii_string: 需要写入的 ASCII 字符串
-        :return: 是否成功写入
         """
-        address_from=int(address_from)
-        address_to=int(address_to)
         # 计算需要的寄存器数量（每个寄存器包含 2 个字节）
-        required_length = address_to - address_from + 1
+        # required_length = address_to - address_from + 1
         byte_data = ascii_string.encode('ascii')  # 将字符串转换为字节数据
 
         # 如果字节长度不符合要求，返回错误
-        if len(byte_data) != required_length * 2:
-            logging.error("字节数据长度与寄存器范围不匹配")
-            return False
+        # if len(byte_data) != required_length * 2:
+        #     modbus_logger.error("字节数据长度与寄存器范围不匹配")
+        #     return False
 
         # 交换每两个字节的位置
         swapped_bytes = []
@@ -278,31 +219,27 @@ class ModbusClientSingleton:
             registers.append(register)
 
         # 检查寄存器数量是否符合要求
-        if len(registers) != required_length:
-            logging.error("寄存器数量与目标地址范围不匹配")
-            return False
+        # if len(registers) != required_length:
+        #     modbus_logger.error("寄存器数量与目标地址范围不匹配")
+        #     return False
 
         # 写入寄存器
-        try:
-            result = self._client.write_holding_registers(address_from, registers, unit=1)
-            if result.isError():
-                logging.error("写入寄存器数据时出错")
-                return False
-            return True
-        except Exception as e:
-            logging.error("写入寄存器时发生异常: %s", e)
-            return False
+        result = self._client.write_holding_registers(address_from, registers, unit=1)
+        if result.isError():
+            modbus_logger.error(f"write_ASCII_string_to_registers: result {result}")
+
 
     def write_float(self,float_v:float,add:int):
         byte_data = struct.pack('>f', float_v)
         register1, register0 = struct.unpack('>HH', byte_data)
         modbus_client.modbus_write('jcq', register0, int(add), 1)
         modbus_client.modbus_write('jcq',register1,int(add+1),1)
-        return True
+
+
+modbus_client = ModbusClientSingleton()
 # 使用示例
 # if __name__ == "__main__":
 #     # 获取 Modbus 客户端单例（会自动连接设备）
-modbus_client = ModbusClientSingleton()
 # res=modbus_client.read_float(2001)
 # print(res)
 # modbus_client.modbus_write("jcq",1,710,2)
