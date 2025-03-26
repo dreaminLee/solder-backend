@@ -2,6 +2,7 @@ import os
 import subprocess
 from threading import Thread, Lock
 
+from click import DateTime
 from flask import Blueprint, Response
 from random import randint
 import json
@@ -10,7 +11,7 @@ from datetime import datetime
 
 from dicts import alarm_dict
 from modbus.client import modbus_client
-from model.Alarm import Alarm
+from models import Alarm
 from tasks.scheduler import file_path
 from util.AES_util import validate_certificate, CERTIFICATE_FILE
 # from util.activate_code import TRIAL_FILE, verify_extension_code
@@ -173,8 +174,9 @@ def background_db_task(alarm_data, alarm_type):
                 # 新建一个报警记录
                 new_alarm = Alarm(
                     AlarmText=key,  # 报警文本为 key 值
-                    DateTime=datetime.now(),  # 当前时间
-                    Type=alarm_type  # 报警类型 ("start" 或 "end")
+                    StartTime=datetime.now() if alarm_type == "start" else None,
+                    EndTime=datetime.now() if alarm_type == "end" else None,
+                    Kind="警告" if alarm_dict.get(key) == 729 else "报警"
                 )
                 session.add(new_alarm)
             session.commit()  # 提交事务
