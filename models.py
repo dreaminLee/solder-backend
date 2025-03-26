@@ -137,8 +137,8 @@ class SolderModel(db.Model):
     Model = db.Column(db.String(100), primary_key=True)  # 型号
     ModelSysName = db.Column(db.String(100), nullable=False, unique=True)  # 系统名称
     MinColdNum = db.Column(db.Integer, nullable=False)  # 最小冷藏数
-    RewarmNum = db.Column(db.Integer, nullable=False)  # 回温次数
-    ReadyOutNum = db.Column(db.Integer, nullable=False)  # 准备出柜次数
+    RewarmNum = db.Column(db.Integer, nullable=False)  # 保持回温数量
+    ReadyOutNum = db.Column(db.Integer, nullable=False)  # 保持待取数量
     StirTime = db.Column(db.Integer, nullable=False)  # 搅拌时间
     StirSpeed = db.Column(db.Integer, nullable=False)  # 搅拌速度
     RewarmTime = db.Column(db.Integer, nullable=False)  # 回温时间
