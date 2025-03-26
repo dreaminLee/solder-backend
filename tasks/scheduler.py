@@ -1271,10 +1271,15 @@ def run_scheduler():
         move_update(mode=mode)
         process_solders()
 
+
+scheduler_heartbeat = APScheduler()
+
+
 # 初始化调度器
 def init_scheduler(app):
+    scheduler_heartbeat.init_app(app)
+    scheduler_heartbeat.add_job(id='task_heartbeat', func=task_heartbeat, trigger="interval", seconds=1, max_instances=1)
     scheduler.init_app(app)
-    scheduler.add_job(id='task_heartbeat', func=task_heartbeat, trigger='interval', seconds=1, max_instances=1)
     scheduler.add_job(id='run_scheduler', func=run_scheduler, trigger='interval', seconds=2, max_instances=1)
     if not scheduler.running:
         # 确保调度器正在运行，如果不是可以重启调度器或处理该情况
