@@ -41,35 +41,35 @@ class ModbusClientSingleton:
         return self._client.is_socket_open()
 
 
-    def modbus_read(self, type: str, address:int, count: int):
+    def modbus_read(self, type: str, address:int, count: int, unit: int = 0):
         """读取寄存器或线圈"""
         if type == "jcq":
             # 调整寄存器地址，尝试读取 40900 开始的寄存器（确保地址是正确的）
-            result = self._client.read_holding_registers(address=address, count=count)  # 读取指定数量的寄存器
+            result = self._client.read_holding_registers(address=address, count=count, unit=unit)  # 读取指定数量的寄存器
             modbus_logger.info(f"read  regs: address {address:-5}  count {count:-3}  res {result.registers}")
             return result.registers
         else:
             # 读取线圈的状态
-            result = self._client.read_coils(address=address, count=count)  # 读取一个线圈
+            result = self._client.read_coils(address=address, count=count, unit=unit)  # 读取一个线圈
             coil_status = result.bits[:count]  # 获取线圈的状态
             modbus_logger.info(f"read  coils: address {address:-5} count {count:-3}  res {coil_status}")
             return coil_status
 
 
-    def modbus_write(self, type: str, content, address:int, count: int):
+    def modbus_write(self, type: str, content, address:int, count: int, unit: int = 0):
         """向寄存器或线圈写入数据"""
         if type == "jcq":
             for register_address in range(address, address + count):
                 value_to_send = content
 
                 # 向寄存器写入数据
-                self._client.write_register(register_address, value_to_send)
+                self._client.write_register(register_address, value_to_send, unit=unit)
                 modbus_logger.info(f"write regs: address {address:-5}  count {count:-3}  content {content}")
 
         else:
             # 向多个线圈写入数据
             coils_to_send = content
-            self._client.write_coils(address=address, values=coils_to_send)
+            self._client.write_coils(address=address, values=coils_to_send, unit=unit)
             modbus_logger.info(f"write coil: address {address:-5}  count {count:-3}  content {content}")
 
 
