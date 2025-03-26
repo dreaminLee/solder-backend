@@ -12,7 +12,7 @@ from datetime import datetime
 from dicts import alarm_dict
 from modbus.client import modbus_client
 from models import Alarm
-from tasks.scheduler import file_path
+from tasks.misc import barcode_file_path
 from util.AES_util import validate_certificate, CERTIFICATE_FILE
 # from util.activate_code import TRIAL_FILE, verify_extension_code
 from util.db_connection import db_instance
@@ -130,8 +130,8 @@ def get_ruku_data():
                 current_data = {}
 
                 # 判断文件是否为空并读取内容
-                if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-                    with open(file_path, "r") as file:
+                if os.path.exists(barcode_file_path) and os.path.getsize(barcode_file_path) > 0:
+                    with open(barcode_file_path, "r") as file:
                         code = file.read()
 
                 # 遍历 901 到 928 之间的数字

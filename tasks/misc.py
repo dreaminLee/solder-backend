@@ -9,3 +9,5 @@ def read_mode():
             return int(mode) if mode in ['0', '1'] else 0  # 默认返回 0
     except FileNotFoundError:
         return 1  # 如果文件不存在，默认返回 1
+
+barcode_file_path = "res_asc.txt"

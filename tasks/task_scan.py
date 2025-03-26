@@ -6,7 +6,7 @@ from models import Solder, SolderFlowRecord, User
 from util.db_connection import db_instance
 from util.logger import task_scan_logger
 
-from .read_mode import read_mode
+from .misc import read_mode, barcode_file_path
 
 def barcode_check(barcode):
     condition_1 = barcode.count("+") >= 5
@@ -39,7 +39,7 @@ def task_scan():
         modbus_client.modbus_write("jcq", location, 140, 1)
         return
 
-    with open("res_asc.txt", "w") as barcode_file:
+    with open(barcode_file_path, "w") as barcode_file:
         barcode_file.write(barcode)
     parts = barcode.split('+')
     model = parts[4]

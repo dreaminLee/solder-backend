@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from modbus.client import modbus_client
-from tasks.scheduler import file_path
+from tasks.misc import barcode_file_path
 from util.MES_request import send_take_log
 from util.db_connection import db_instance
 from util.Response import Response
@@ -115,7 +115,7 @@ def get_solders():
 
 @solder_bp.route("/get_code", methods=['GET'])
 def get_code():
-    with open(file_path, "r") as file:
+    with open(barcode_file_path, "r") as file:
         code = file.read()
     if code:
         return Response.SUCCESS(code)
