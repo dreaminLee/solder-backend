@@ -469,8 +469,16 @@ def process_solders():
                         session.query(Solder).filter(Solder.SolderCode == solder.SolderCode).update({
                             Solder.RewarmEndDateTime: check_threshold
                         }, synchronize_session=False)
+                        rule = session.query().with_entities(SolderModel.JiaobanRule).filter(SolderModel.Model == solder.Model).first().JiaobanRule
+                        if solder_storage_time <= check_threshold:
+                            if rule == "自动搅拌":
+                                modbus_value = 12
+                            else:
+                                modbus_value = 21
+                        else:
+                            modbus_value = 10
+                        # modbus_value = 12 if solder_storage_time <= check_threshold else 10
                         session.commit()
-                        modbus_value = 12 if solder_storage_time <= check_threshold else 10
                         logger.info(
                             f"状态变换：{region_name} || 存储时间{solder_storage_time} || 预约的回温结束时间{check_threshold} || 点位{int(solder.StationID)} || 写入值{modbus_value}"
                         )
@@ -1077,8 +1085,16 @@ def move_update(mode):
                         session.query(Solder).filter(Solder.SolderCode == solder.SolderCode).update({
                             Solder.RewarmEndDateTime: check_threshold
                         }, synchronize_session=False)
+                        rule = session.query().with_entities(SolderModel.JiaobanRule).filter(SolderModel.Model == solder.Model).first().JiaobanRule
+                        if solder_storage_time <= check_threshold:
+                            if rule == "自动搅拌":
+                                modbus_value = 12
+                            else:
+                                modbus_value = 21
+                        else:
+                            modbus_value = 10
+                        # modbus_value = 12 if solder_storage_time <= check_threshold else 10
                         session.commit()
-                        modbus_value = 2 if solder_storage_time <= check_threshold else 0
                         logger.info(
                             f"状态变换：{region_name} || 存储时间{solder_storage_time} || 回温结束时间{check_threshold} || 点位{int(solder.StationID)} || 写入值{modbus_value}"
                         )
