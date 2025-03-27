@@ -580,12 +580,13 @@ def daiqu_solder():
     results = session.query(Solder, Station.Disabled).join(
         Station, Solder.StationID == Station.StationID
     ).filter(
-        Station.StaArea == "待取区"
+        (Station.StaArea == "待取区")
     ).all()
+
 
     session.close()
     # 将查询结果转化为字典并根据条件过滤
-    records = [
+    records_ready_daiqu = [
         {
             "SolderCode": solder.SolderCode,
             "Model": solder.Model,
@@ -596,9 +597,30 @@ def daiqu_solder():
         for solder, station_disabled in results
         if modbus_client.modbus_read('jcq',station_disabled,1)[0] == int(type)
     ]
+    # 查询回温区中的 搅拌规则=“出库搅拌” 的 Solder 数据
+    rewarm_area_out_stir_solders = session.query(Solder).join(
+        SolderModel, Solder.Model == SolderModel.Model
+    ).filter(
+        (SolderModel.JiaobanRule == "出库搅拌"),
+    ).all()
 
+    session.close()
+    # 将查询结果转化为字典并根据条件过滤
+    records_rewarm_daiqu = [
+        {
+            "SolderCode": solder.SolderCode,
+            "Model": solder.Model,
+            "StorageUser": solder.StorageUser,
+            "StorageDateTime": solder.StorageDateTime.strftime("%Y-%m-%d %H:%M:%S") if solder.StorageDateTime else None,
+            'Station': solder.StationID
+        }
+        for solder in rewarm_area_out_stir_solders
+        if modbus_client.modbus_read('jcq', solder.StationID , 1)[0] == 21
+    ]
+
+    records_daiqu = records_ready_daiqu + records_rewarm_daiqu
     # 返回查询结果
-    return jsonify(Response.SUCCESS(records))
+    return jsonify(Response.SUCCESS(records_daiqu))
 
 @solder_bp.route('/out_solder', methods=['POST'])
 @jwt_required()
