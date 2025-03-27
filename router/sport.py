@@ -328,14 +328,10 @@ def input_open():
         else:
             return Response.FAIL()
 
-        result = modbus_client.modbus_write("xq", write_value, 575, 1)
-        if result:
-            # 如果写入 [True] 成功，启动延迟写入线程
-            if write_value == [True]:
-                threading.Thread(target=delayed_write, daemon=True).start()
-            return Response.SUCCESS(write_value)
-        else:
-            return Response.FAIL()
+        modbus_client.modbus_write("xq", write_value, 575, 1)
+        threading.Thread(target=delayed_write, daemon=True).start()
+        return Response.SUCCESS(write_value)
+
 
 @sport_bp.route('/output_open', methods=['POST'])
 def output_open():
