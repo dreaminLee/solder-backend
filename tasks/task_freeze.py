@@ -4,12 +4,10 @@ from sqlalchemy import or_
 
 from modbus.client import modbus_client
 from models import Station, Solder, SolderModel, SolderFlowRecord, User, Alarm
-from router.solder import daiqu_solder
 from util.db_connection import db_instance
 from util.logger import logger
 from datetime import datetime
 # 设置 APScheduler 日志级别为 WARNING
-logger.getLogger('apscheduler').setLevel(logger.WARNING)
 
 def lc_mode():
     session = db_instance.get_session()
@@ -18,7 +16,7 @@ def lc_mode():
     StaType_station_dict = {station.StaType: station.StationID for station in stations}
 
     # 检查初始化冷藏区，有锡膏的点位状态为0
-    lc_solders_stationID_list = session.query(Station.StationID).join(Solder.StationID == Station.StationID).filter(Solder.StationID.between(201,539)).all()
+    lc_solders_stationID_list = session.query(Station.StationID).join(Solder, Solder.StationID == Station.StationID).filter(Solder.StationID.between(201,539)).all()
     for solders_stationID in lc_solders_stationID_list:
         modbus_client.modbus_write("jcq", 0 , solders_stationID, 1)
 
@@ -29,7 +27,7 @@ def lc_mode():
         # 回温区的锡膏状态设成5（异常）
         modbus_client.modbus_write("jcq", 5, int(solder.StationID), 1)
         # 冷藏区找出第一个没锡膏的点位，状态设成1（可放)
-        solder_fang_stationID = session.query(Station.StationID).filter(Station.StationID.not_in(lc_solders_stationID_list)).first()
+        solder_fang_stationID = session.query(Station.StationID).filter(Station.StationID.between(201, 539), Station.StationID.not_in(lc_solders_stationID_list)).first().StationID
         modbus_client.modbus_write("jcq", 1 , solder_fang_stationID, 1)
         lc_solders_stationID_list.append(solder_fang_stationID)
 
@@ -37,7 +35,7 @@ def lc_mode():
         # 回温区的锡膏状态设成5（异常）
         modbus_client.modbus_write("jcq", 5, int(solder.StationID), 1)
         # 冷藏区找出第一个没锡膏的点位，状态设成1（可放)
-        solder_fang_stationID = session.query(Station.StationID).filter(Station.StationID.not_in(lc_solders_stationID_list)).first()
+        solder_fang_stationID = session.query(Station.StationID).filter(Station.StationID.between(201, 539), Station.StationID.not_in(lc_solders_stationID_list)).first().StationID
         modbus_client.modbus_write("jcq", 1 , solder_fang_stationID, 1)
         lc_solders_stationID_list.append(solder_fang_stationID)
 
@@ -129,7 +127,7 @@ def lc_mode():
                                 existing_record.StationID = station_fang
                                 existing_record.StorageDateTime = datetime.now()
                                 if station_fang in range(201,540):
-                                    existing_record.BackLCTimes += 1
+                                    existing_record.BackLCTimes = 1 + int(existing_record.BackLCTimes)
                                 session.commit()
                             elif existing_record.StationID == station_fang:
                                 # 如果只有 StationID 存在，更新 SolderCode 和数据
@@ -155,7 +153,7 @@ def lc_mode():
                             sql_data = Solder(
                                 SolderCode=code,
                                 Model=solder_record.Model,
-                                InTimes=inTimes+1,
+                                InTimes=int(inTimes)+1,
                                 BackLCTimes=0,
                                 StationID=station_fang,
                                 StorageUser=user_name,
