@@ -11,3 +11,9 @@ def read_mode():
         return 1  # 如果文件不存在，默认返回 1
 
 barcode_file_path = "res_asc.txt"
+
+def get_current_user() -> int:
+        user_cache_file = "user_cache.txt"
+        with open(user_cache_file, "r", encoding="utf-8") as f:
+            id_str = f.read()
+            return int(id_str) if len(id_str) else 0
