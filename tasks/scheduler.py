@@ -1088,11 +1088,11 @@ def move_update(mode):
                         rule = session.query().with_entities(SolderModel.JiaobanRule).filter(SolderModel.Model == solder.Model).first().JiaobanRule
                         if solder_storage_time <= check_threshold:
                             if rule == "自动搅拌":
-                                modbus_value = 12
+                                modbus_value = 2
                             else:
                                 modbus_value = 21
                         else:
-                            modbus_value = 10
+                            modbus_value = 0
                         # modbus_value = 12 if solder_storage_time <= check_threshold else 10
                         session.commit()
                         logger.info(
