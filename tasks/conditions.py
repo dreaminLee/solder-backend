@@ -4,7 +4,7 @@ from sqlalchemy.sql.functions import current_time
 from modbus.client import modbus_client
 from models import SolderModel, Solder
 from router.solder import out_solder
-from test import session
+from util.db_connection import db_instance
 from datetime import datetime, timedelta, timezone
 import logging
 """
@@ -13,12 +13,14 @@ import logging
     int: cold_area_first_empty_station
 """
 def find_cold_area_first_empty_station():
-    cold_area_empty_station = 0
-    for cold_area_stationID in range(201, 540):
-        if session.query(Solder).filter(Solder.StationID == cold_area_stationID).all() == None:
-            cold_area_empty_station = cold_area_stationID
-            return cold_area_empty_station
-    return cold_area_empty_station
+    with db_instance.get_session() as session:
+        cold_areas_occupied = session.query().with_entities(Solder.StationID).filter(201 <= Solder.StationID, Solder.StationID <= 380).all()
+        cold_areas_empty = [i for i in range(201, 380) if i not in cold_areas_occupied]
+        if len(cold_areas_empty):
+            return cold_areas_empty[0]
+        else:
+            return None
+
 
 """
     获取回温区中第一个空的点位
@@ -83,8 +85,9 @@ def condition_in_area_to_cold_area():
     
     in_area_available_staionID_list = []
     for in_area_stationID in range(901,929):
-        if modbus_client.modbus_read("jcq", in_area_stationID, 1) == 2:
+        if modbus_client.modbus_read("jcq", in_area_stationID, 1)[0] == 2:
             in_area_available_staionID_list.append(in_area_stationID)
+            break
     # 冷藏区中第一个空的点位
     cold_area_empty_stationID = find_cold_area_first_empty_station()
 

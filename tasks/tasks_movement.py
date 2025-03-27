@@ -50,6 +50,7 @@ def task_move_in_area_to_cold_area(cold_area_empty: int):
     # 开始扫码流程，重试3次
     while True:
         if retry == max_reties:
+            modbus_client.modbus_write("jcq", 0, cold_area_empty, 1)
             return
 
         req_scan = modbus_client.modbus_read("jcq", MADDR_BARCODE_SCAN_REQ, 1)[0]
@@ -73,6 +74,7 @@ def task_move_in_area_to_cold_area(cold_area_empty: int):
             break
 
     # 等待确认机械臂放完成并修改点位状态
+    confirm_robot_get_complete(190, cold_area_empty)
     confirm_robot_put_complete(190, cold_area_empty)
     modbus_client.modbus_write("jcq", 0, cold_area_empty, 1)
 

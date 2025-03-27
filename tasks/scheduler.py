@@ -32,26 +32,32 @@ scheduler = APScheduler()
 
 
 def main_loop():
+    # if read_mode() == 1:
+    #     if condition_in_area_to_cold_area():
+    #         task_move_in_area_to_cold_area()
+    #     elif condition_cold_area_to_rewarm_area():
+    #         task_move_cold_area_to_rewarm_area()
+    #     elif condition_go_back_cold_area():
+    #         # 判断锡膏是在回温区还是在待取区
+    #         task_move_rewarm_area_to_cold_area()
+    #         task_move_ready_area_to_cold_area()
+    #     elif condition_rewarm_area_to_ready_area():
+    #         task_move_rewarm_area_to_ready_area()
+    #     elif condition_to_be_stirred_out():
+    #         task_move_out_from_rewarm_area()
+    #     elif condition_already_stirred_out():
+    #         task_move_out_from_ready_area()
+    # else:
+    #     if condition_cold_mode():
+    #         # 判断锡膏是在回温区还是在待取区
+    #         task_move_rewarm_area_to_cold_area()
+    #         task_move_ready_area_to_cold_area()
     if read_mode() == 1:
-        if condition_in_area_to_cold_area():
-            task_move_in_area_to_cold_area()
-        elif condition_cold_area_to_rewarm_area():
-            task_move_cold_area_to_rewarm_area()
-        elif condition_go_back_cold_area():
-            # 判断锡膏是在回温区还是在待取区
-            task_move_rewarm_area_to_cold_area()
-            task_move_ready_area_to_cold_area()
-        elif condition_rewarm_area_to_ready_area():
-            task_move_rewarm_area_to_ready_area()
-        elif condition_to_be_stirred_out():
-            task_move_out_from_rewarm_area()
-        elif condition_already_stirred_out():
-            task_move_out_from_ready_area()
+        has_cold_area_empty, cold_area_empty = condition_in_area_to_cold_area()
+        if has_cold_area_empty:
+            task_move_in_area_to_cold_area(cold_area_empty)
     else:
-        if condition_cold_mode():
-            # 判断锡膏是在回温区还是在待取区
-            task_move_rewarm_area_to_cold_area()
-            task_move_ready_area_to_cold_area()
+        pass
 
 
 # 初始化调度器

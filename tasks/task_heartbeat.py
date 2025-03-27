@@ -1,8 +1,9 @@
 from modbus.client import modbus_client
 
-heartbeat = True
 
 def task_heartbeat():
+
+    heartbeat = modbus_client.modbus_read('xq', 574, 1)[0]
     if heartbeat:
         modbus_client.modbus_write('xq', [False], 574, 1)
     else:
