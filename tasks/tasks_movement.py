@@ -8,7 +8,7 @@ from models import Solder, SolderFlowRecord, User, SolderModel
 from modbus.client import modbus_client
 from modbus.scan import scan
 from util.logger import task_movement_logger
-from .misc import barcode_file_path, get_current_user
+from .misc import barcode_file_path, get_current_user, area_id_to_move_id
 from consts import *
 
 
@@ -18,12 +18,13 @@ def confirm_robot_action(from_area, to_area, confirm_action):
     :param from_num: 取点位
     :param to_num: 放点位
     """
+    move_id_from, move_id_to = area_id_to_move_id[from_area], area_id_to_move_id[to_area]
     action_complete = modbus_client.modbus_read("jcq", MADDR_ROBOT_STATUS_ACT, 1) == confirm_action
     while not action_complete:
         sleep(ROBOT_ACTING_WAIT_TIME)
         action_complete = modbus_client.modbus_read("jcq", MADDR_ROBOT_STATUS_ACT, 1) == confirm_action
-    modbus_client.modbus_write("jcq",      from_area, MADDR_ROBOT_STATUS_GET_COMFIRM, 1)
-    modbus_client.modbus_write("jcq",        to_area, MADDR_ROBOT_STATUS_PUT_COMFIRM, 1)
+    modbus_client.modbus_write("jcq",   move_id_from, MADDR_ROBOT_STATUS_GET_COMFIRM, 1)
+    modbus_client.modbus_write("jcq",     move_id_to, MADDR_ROBOT_STATUS_PUT_COMFIRM, 1)
     modbus_client.modbus_write("jcq", confirm_action, MADDR_ROBOT_STATUS_ACT_COMFIRM, 1)
 
 
