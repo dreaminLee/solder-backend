@@ -19,7 +19,6 @@ from util.db_connection import db_instance
 from util.logger import logger
 
 from .task_heartbeat import task_heartbeat
-from .task_scan import task_scan
 from .conditions import *
 from .tasks_movement import *
 from .misc import read_mode
