@@ -4,7 +4,7 @@ from functools import partial
 from sqlalchemy import update, delete, insert
 
 from util.db_connection import db_instance
-from models import Solder, SolderFlowRecord, User
+from models import Solder, SolderFlowRecord, User, SolderModel
 from modbus.client import modbus_client
 from modbus.scan import scan
 from util.logger import task_movement_logger
@@ -188,6 +188,13 @@ def task_move_rewarm_area_to_ready_area(solder_to_move: Solder, ready_area_empty
     # 修改点位状态并等待机械臂取放完成
     modbus_client.modbus_write("jcq", 2, rewarm_area_from, 1)
     modbus_client.modbus_write("jcq", 1, ready_area_empty, 1)
+    stir_time = 300
+    stir_speed = 500
+    with db_instance.get_session() as session:
+        stir_params = session.query().with_entities(SolderModel.StirTime, SolderModel.StirSpeed).filter(SolderModel.Model == solder_to_move.Model).first()
+        stir_time, stir_speed = stir_params.StirTime, stir_params.StirSpeed
+    modbus_client.write_float(stir_speed, 1522)
+    modbus_client.write_float(stir_time, 1526)
     confirm_robot_get_complete(rewarm_area_from, ready_area_empty)
     confirm_robot_put_complete(rewarm_area_from, ready_area_empty)
     modbus_client.modbus_write("jcq", 0, rewarm_area_from, 1)
@@ -244,6 +251,13 @@ def task_move_out_from_rewarm_area(solder_to_move: Solder):
     :param solder_to_move: 待移动的锡膏
     """
     rewarm_area_from = solder_to_move.StationID
+    stir_time = 300
+    stir_speed = 500
+    with db_instance.get_session() as session:
+        stir_params = session.query().with_entities(SolderModel.StirTime, SolderModel.StirSpeed).filter(SolderModel.Model == solder_to_move.Model).first()
+        stir_time, stir_speed = stir_params.StirTime, stir_params.StirSpeed
+    modbus_client.write_float(stir_speed, 1522)
+    modbus_client.write_float(stir_time, 1526)
     modbus_client.modbus_write("jcq", 22, rewarm_area_from, 1)
     confirm_robot_get_complete(rewarm_area_from, 0)
     confirm_user_get_complete(rewarm_area_from, 0)
