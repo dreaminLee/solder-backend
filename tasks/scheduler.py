@@ -1095,7 +1095,6 @@ def move_update(mode):
                             modbus_value = 10
                         # modbus_value = 12 if solder_storage_time <= check_threshold else 10
                         session.commit()
-                        modbus_value = 2 if (solder_storage_time <= check_threshold and model_data.JiaobanRule=="自动搅拌") else 0
                         logger.info(
                             f"状态变换：{region_name} || 存储时间{solder_storage_time} || 回温结束时间{check_threshold} || 点位{int(solder.StationID)} || 写入值{modbus_value}"
                         )
