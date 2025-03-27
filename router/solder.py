@@ -11,7 +11,7 @@ from util.db_connection import db_instance
 from util.Response import Response
 from models import Solder, SolderModel, Station, SolderFlowRecord, User
 from util.parse import parse_barcode
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 
 solder_bp = Blueprint('solder', __name__)
 
@@ -642,20 +642,20 @@ def out_solder():
 
     user_name = user.UserName  # 获取用户名
 
-    results = session.query(Solder, Station.Disabled).join(
+    results = session.query(Solder, Station.StationID).join(
         Station, Solder.StationID == Station.StationID
     ).filter(
-        Station.StaArea == "待取区"
+        or_(Station.StaArea == "待取区", Station.StaArea == "回温区")
     ).all()
 
     # 将查询结果转化为字典并根据条件过滤
     solder_records = [
         {
             "SolderCode": solder.SolderCode,
-            "Disabled": station_disabled
+            "StationID": station_id
         }
-        for solder, station_disabled in results
-        if modbus_client.modbus_read('jcq', station_disabled, 1)[0] == 0 and solder.Model==model_type
+        for solder, station_id in results
+        if modbus_client.modbus_read('jcq', station_id, 1)[0] == 0 and solder.Model==model_type
     ]
 
     # 如果没有找到符合条件的锡膏记录
@@ -674,7 +674,8 @@ def out_solder():
 
         # 插入到 SolderFlowRecord 表
         session.add(solder_flow_record)
-        modbus_client.modbus_write('jcq',2,solder_record["Disabled"],1)
+        rule = session.query().with_entities(SolderModel.JiaobanRule).filter(SolderModel.Model == model_type).first().JiaobanRule
+        modbus_client.modbus_write('jcq',2 if rule == "自动搅拌" else 22,solder_record["Disabled"],1)
         # # 更新记录的 StationID 为 "待取区" 的工位ID
         # solder_record.StationID = station.StationID  # 修改 StationID 为待取区的工位ID
 
