@@ -18,7 +18,7 @@ def lc_mode():
     # 检查初始化冷藏区，有锡膏的点位状态为0
     lc_solders_stationID_list = session.query(Station.StationID).join(Solder, Solder.StationID == Station.StationID).filter(Solder.StationID.between(201,539)).all()
     for solders_stationID in lc_solders_stationID_list:
-        modbus_client.modbus_write("jcq", 0 , solders_stationID, 1)
+        modbus_client.modbus_write("jcq", 0 , solders_stationID.StationID, 1)
 
     warm_solders_list = session.query(Solder).filter(Solder.StationID.between(601,650)).all()
     daiqu_solder_list = session.query(Solder).filter(Solder.StationID.between(801,820)).all()
@@ -252,3 +252,4 @@ def lc_mode():
         return
     except TimeoutError:
         logger.warning("任务执行超时，跳过当前任务")
+    session.close()

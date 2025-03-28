@@ -1098,7 +1098,9 @@ def move_update(mode):
                         logger.info(
                             f"状态变换：{region_name} || 存储时间{solder_storage_time} || 回温结束时间{check_threshold} || 点位{int(solder.StationID)} || 写入值{modbus_value}"
                         )
-                        modbus_client.modbus_write("jcq", modbus_value, int(solder.StationID), 1)
+                        current_modbus_status = modbus_client.modbus_read("jcq", int(solder.StationID), 1)[0]
+                        if current_modbus_status != 22 and current_modbus_status != 21:
+                            modbus_client.modbus_write("jcq", modbus_value, int(solder.StationID), 1)
 
             if start == 803:
                 for solder, model_data in solder_data:

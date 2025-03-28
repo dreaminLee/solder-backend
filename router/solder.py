@@ -577,14 +577,12 @@ def daiqu_solder():
     session = db_instance.get_session()
 
     # 查询 Solder 数据并同时获取 Station.Disabled 字段
-    results = session.query(Solder, Station.Disabled).join(
+    results = session.query(Solder, Station.StationID).join(
         Station, Solder.StationID == Station.StationID
     ).filter(
         (Station.StaArea == "待取区")
     ).all()
 
-
-    session.close()
     # 将查询结果转化为字典并根据条件过滤
     records_ready_daiqu = [
         {
@@ -602,9 +600,9 @@ def daiqu_solder():
         SolderModel, Solder.Model == SolderModel.Model
     ).filter(
         (SolderModel.JiaobanRule == "出库搅拌"),
+        (Solder.StationID.between(601, 650)),
     ).all()
 
-    session.close()
     # 将查询结果转化为字典并根据条件过滤
     records_rewarm_daiqu = [
         {
@@ -617,7 +615,7 @@ def daiqu_solder():
         for solder in rewarm_area_out_stir_solders
         if modbus_client.modbus_read('jcq', solder.StationID , 1)[0] == 21
     ]
-
+    session.close()
     records_daiqu = records_ready_daiqu + records_rewarm_daiqu
     # 返回查询结果
     return jsonify(Response.SUCCESS(records_daiqu))
@@ -677,7 +675,7 @@ def out_solder():
             "StationID": station_id
         }
         for solder, station_id in results
-        if modbus_client.modbus_read('jcq', station_id, 1)[0] == 0 and solder.Model==model_type
+        if (modbus_client.modbus_read('jcq', station_id, 1)[0] == 0 or modbus_client.modbus_read("jcq", station_id, 1)[0] == 21) and solder.Model==model_type
     ]
 
     # 如果没有找到符合条件的锡膏记录
@@ -697,7 +695,7 @@ def out_solder():
         # 插入到 SolderFlowRecord 表
         session.add(solder_flow_record)
         rule = session.query().with_entities(SolderModel.JiaobanRule).filter(SolderModel.Model == model_type).first().JiaobanRule
-        modbus_client.modbus_write('jcq',2 if rule == "自动搅拌" else 22,solder_record["Disabled"],1)
+        modbus_client.modbus_write('jcq',2 if rule == "自动搅拌" else 22,solder_record["StationID"],1)
         # # 更新记录的 StationID 为 "待取区" 的工位ID
         # solder_record.StationID = station.StationID  # 修改 StationID 为待取区的工位ID
 

@@ -37,13 +37,13 @@ class ModbusClientSingleton:
         """检查是否已连接"""
         return self._client.is_socket_open()
 
-    def modbus_read(self, type: str, address:int, count: int):
+    def modbus_read(self, type: str, address:int, count: int, unit=0):
         """读取寄存器或线圈"""
         try:
             # address=int(address)
             if type == "jcq":
                 # 调整寄存器地址，尝试读取 40900 开始的寄存器（确保地址是正确的）
-                result = self._client.read_holding_registers(address=address, count=count)  # 读取指定数量的寄存器
+                result = self._client.read_holding_registers(address=address, count=count, unit=unit)  # 读取指定数量的寄存器
 
                 if result.isError():
                     logging.error(f"读取寄存器失败: {result}")
@@ -52,7 +52,7 @@ class ModbusClientSingleton:
                     return result.registers
             else:
                 # 读取线圈的状态
-                result = self._client.read_coils(address=address, count=count)  # 读取一个线圈
+                result = self._client.read_coils(address=address, count=count, unit=unit)  # 读取一个线圈
 
                 if result.isError():
                     logging.error(f"读取线圈失败: {result}")
@@ -67,7 +67,7 @@ class ModbusClientSingleton:
             # return None
             # print("读取操作结束")
 
-    def modbus_write(self, type: str, content, address:int, count: int):
+    def modbus_write(self, type: str, content, address:int, count: int, unit=0):
         """向寄存器或线圈写入数据"""
         try:
             # address=int(address)
@@ -77,7 +77,7 @@ class ModbusClientSingleton:
                     value_to_send = content  # random.choice([0, 1, 2])  # 随机选择 0, 1 或 2
 
                     # 向寄存器写入数据
-                    result = self._client.write_register(register_address, value_to_send)
+                    result = self._client.write_register(register_address, value_to_send, unit=unit)
 
                     # time.sleep(0.1)
                     # 检查是否写入成功
@@ -90,7 +90,7 @@ class ModbusClientSingleton:
             else:
                 # 向多个线圈写入数据
                 coils_to_send = content
-                result = self._client.write_coils(address=address, values=coils_to_send)
+                result = self._client.write_coils(address=address, values=coils_to_send, unit=unit)
 
                 # time.sleep(0.1)
                 if result.isError():
