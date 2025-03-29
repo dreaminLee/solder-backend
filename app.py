@@ -13,7 +13,7 @@ from router.solderflow import solderflow_bp
 from router.sport import sport_bp
 from router.station import station_bp
 from router.system import system_bp
-from router.temperature import temperature_bp, periodic_insertion, start_periodic_insertion
+from router.temperature import temperature_bp, periodic_insertion, start_periodic_insertion,clear_expired_temperature_records,periodic_clear,start_periodic_clear,expire_days
 from router.user import user_bp
 from router.stream import stream_bp
 from tasks.scheduler import init_scheduler
@@ -43,4 +43,5 @@ if __name__ == '__main__':
     # 1234555
     # 启动温度数据插入任务
     start_periodic_insertion()
+    start_periodic_clear()
     app.run(debug=True)
