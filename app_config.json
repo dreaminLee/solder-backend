@@ -12,5 +12,15 @@
         "username": "root",
         "password": "123456",
         "db_name": "solder"
+    },
+    "modbus_config": {
+        "tcp_host": "127.0.0.1",
+        "tcp_port": 502,
+        "serial_port": "COM1",
+        "serial_baudrate": 115200,
+        "serial_bytesize": 8,
+        "serial_parity": "N",
+        "serial_stopbits": 1,
+        "serial_timeout": 1
     }
 }

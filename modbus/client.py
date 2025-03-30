@@ -6,6 +6,7 @@ from pymodbus.client.sync import ModbusTcpClient
 import re
 
 from util.logger import logger
+from config.modbus_config import tcp_host, tcp_port
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
@@ -14,13 +15,13 @@ class ModbusClientSingleton:
     _instance = None
     _client = None
 
-    def __new__(cls, host='192.168.1.88', port=502):
+    def __new__(cls, host=tcp_host, port=tcp_port):
         """创建单例客户端，并在创建时自动连接设备"""
         if cls._instance is None:
             cls._instance = super(ModbusClientSingleton, cls).__new__(cls)
             cls._instance._client = ModbusTcpClient(host, port)
             if cls._instance._client.connect():
-                logging.info("成功连接到设备 192.168.1.88")
+                logging.info(f"成功连接到设备 {tcp_host}:{tcp_port}")
             else:
                 logging.error("无法连接到设备")
         return cls._instance

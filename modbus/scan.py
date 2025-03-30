@@ -2,6 +2,7 @@ import serial
 import time
 
 from util.logger import logger
+from config.modbus_config import serial_port, serial_baudrate, serial_bytesize, serial_parity, serial_stopbits, serial_timeout
 
 #
 # def scan():
@@ -58,12 +59,12 @@ from util.logger import logger
 
 def scan():
     # 配置串口参数
-    port = 'COM1'  # 根据实际情况修改串口号
-    baudrate = 115200  # 根据扫描枪的波特率进行修改
-    bytesize = serial.EIGHTBITS
-    parity = serial.PARITY_NONE
-    stopbits = serial.STOPBITS_ONE
-    timeout = 1  # 超时时间，单位：秒
+    port = serial_port  # 根据实际情况修改串口号
+    baudrate = serial_baudrate  # 根据扫描枪的波特率进行修改
+    bytesize = serial_bytesize
+    parity = serial_parity
+    stopbits = serial_stopbits
+    timeout = serial_timeout  # 超时时间，单位：秒
 
     try:
         # 打开串口
