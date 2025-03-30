@@ -4,7 +4,7 @@ from PIL import Image
 import os
 from pathlib import Path
 
-from .facercg_config import recognizer_path, samples_path
+from config.face_config import recognizer_path, samples_path
 
 recognizer = cv2.face.LBPHFaceRecognizer.create()
 

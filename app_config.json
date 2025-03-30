@@ -1,0 +1,16 @@
+{
+    "face_config": {
+        "samples_path": "./sample",
+        "classifier_path": "./face/haarcascade_frontalface_default.xml",
+        "recognizer_path": "./face/recognizer.yml",
+        "fontfile_path": "./face/msyh.ttc",
+        "train_size": 30
+    },
+    "mysql_config": {
+        "hostname": "127.0.0.1",
+        "port": "3306",
+        "username": "root",
+        "password": "123456",
+        "db_name": "solder"
+    }
+}

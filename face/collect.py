@@ -6,7 +6,7 @@ from PIL import ImageFont, ImageDraw, Image
 import numpy as np
 from pathlib import Path
 
-from .facercg_config import samples_path, classifier_path, train_size
+from config.face_config import samples_path, classifier_path, train_size
 from .draw_chs import draw_chs
 
 def set_window_topmost(window_name):

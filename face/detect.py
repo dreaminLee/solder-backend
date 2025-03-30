@@ -2,7 +2,7 @@ import cv2
 import time
 from datetime import datetime
 
-from .facercg_config import classifier_path, recognizer_path
+from config.face_config import classifier_path, recognizer_path
 from .draw_chs import draw_chs
 from .collect import set_window_topmost
 
