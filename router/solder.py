@@ -573,7 +573,7 @@ def order_solder():
 """
 @solder_bp.route('/daiqu_solder', methods=['GET'])
 def daiqu_solder():
-    data = request.get_json()
+    # data = request.get_json()
     # type = data.get('type')
     # 获取数据库会话
     session = db_instance.get_session()
@@ -619,8 +619,10 @@ def daiqu_solder():
 
     session.close()
     records_daiqu = records_ready_daiqu + records_rewarm_daiqu
+    print(records_daiqu)
     # 返回查询结果
-    return jsonify(Response.SUCCESS(records_daiqu))
+    # return jsonify(Response.SUCCESS(records_daiqu))
+    return Response.SUCCESS(records_daiqu)
 
 
 """
@@ -628,7 +630,7 @@ def daiqu_solder():
 """
 @solder_bp.route('/accessible_solder', methods=['GET'])
 def accessible_solder():
-    data = request.get_json()
+    # data = request.get_json()
     # 获取数据库会话
     session = db_instance.get_session()
 

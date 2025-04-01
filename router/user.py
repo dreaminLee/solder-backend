@@ -232,7 +232,7 @@ def face_collect():
     return jsonify(Response.SUCCESS(res))
 
 
-@user_bp.route('/face_detect', methods=['POST'])
+@user_bp.route('/face_detect', methods=['GET'])
 def face_detect():
     user_id = detect()
     if user_id is not "UNKNOWN":
@@ -243,7 +243,7 @@ def face_detect():
             additional_claims={'user_id': mysqlAdminDO.UserID}
         )
         access_token = f"Bearer {access_token}"
-        res_list = {"token": access_token}
+        res_list = {"token": access_token, "user_id":user_id}
         # 将 UserID 写入 user_cache.txt 文件
         user_cache_file = "user_cache.txt"
         with open(user_cache_file, "w") as file:
