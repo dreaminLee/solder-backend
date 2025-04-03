@@ -17,6 +17,7 @@ from models import Station, Solder, SolderModel, SolderFlowRecord, User, Alarm
 from util.MES_request import schedule_get_token, send_freeze_log, send_reheat_log, send_mix_log
 from util.db_connection import db_instance
 from util.logger import logger
+from util.parse import parse_barcode
 
 from .task_heartbeat import task_heartbeat
 from .task_freeze import lc_mode
@@ -607,24 +608,30 @@ def move_update(mode):
             if check_string2(res_asc):
                 # 提取型号、生产日期
                 code=res_asc
-                parts = code.split('+')
-                model = parts[4] if len(parts) > 4 else None
-                productDate = parts[2] if len(parts) > 4 else None
+                result = parse_barcode(code)
+                # parts = code.split('+')
+                # model = parts[4] if len(parts) > 4 else None
+                # productDate = parts[2] if len(parts) > 4 else None
+                model = result['model']
+                productDate = result['product_date']
+                expireDate = result['expire_date']
+                shelfLife = result['shelf_life']
                 # 尝试将其转换为正确的日期时间格式
-                try:
-                    # 假设前两位是年份，中间两位是月份，后两位是日期
-                    year = 2000 + int(productDate[:2])
-                    month = int(productDate[2:4])
-                    day = int(productDate[4:])
-                    # 检查日期是否合法
-                    if 1 <= month <= 12 and 1 <= day <= 31:
-                        productDate = datetime.datetime(year, month, day)
-                    else:
-                        # 处理不合法的日期，例如设置为默认值
-                        productDate = None
-                except ValueError:
-                    # 处理转换失败的情况，例如设置为默认值
-                    productDate = None
+                # try:
+                #     # 假设前两位是年份，中间两位是月份，后两位是日期
+                #     year = 2000 + int(productDate[:2])
+                #     month = int(productDate[2:4])
+                #     day = int(productDate[4:])
+                #     # 检查日期是否合法
+                #     if 1 <= month <= 12 and 1 <= day <= 31:
+                #         productDate = datetime.datetime(year, month, day)
+                #     else:
+                #         # 处理不合法的日期，例如设置为默认值
+                #         productDate = None
+                # except ValueError:
+                #     # 处理转换失败的情况，例如设置为默认值
+                #     productDate = None
+
                 logger.info(f"根据扫描到的条码解析到了型号：{model}")
                 logger.info(f"根据扫描到的条码解析到了生产日期：{productDate}")
                 modbus_client.modbus_write("jcq", 1, 141, 1)
@@ -650,7 +657,9 @@ def move_update(mode):
                     # 更新现有记录
                     existing_solder.SolderCode = code
                     existing_solder.Model = model
-                    existing_solder.ProductDate = productDate
+                    # existing_solder.ProductDate = productDate
+                    # existing_solder.ExpireDate = expireDate
+                    existing_solder.ShelfLife = shelfLife
                     existing_solder.InTimes += 1
                     existing_solder.StorageUser = user_name
                     existing_solder.StorageDateTime = datetime.now()
@@ -676,7 +685,9 @@ def move_update(mode):
                     sql_data = Solder(
                         SolderCode=code,
                         Model=model,
-                        ProductDate=productDate,
+                        # ProductDate=productDate,
+                        # ExpireDate=expireDate,
+                        ShelfLife = shelfLife,
                         InTimes=inTimes+1,
                         BackLCTimes=0,
                         StationID=190,

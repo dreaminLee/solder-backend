@@ -240,32 +240,6 @@ def get_models():
 def add_model():
     data = request.get_json()
     barcode = data.get("barcode")
-
-    # if barcode:
-    #     result = parse_barcode(barcode)
-    #     model = result['型号']
-    #     model_sys_name = data.get('model_sys_name')
-    #     min_cold_num = data.get('min_cold_num')
-    #     rewarm_num = data.get('rewarm_num')
-    #     ready_out_num = data.get('ready_out_num')
-    #     stir_time = data.get('stir_time')
-    #     stir_speed = data.get('stir_speed')
-    #     rewarm_time = data.get('rewarm_time')
-    #     rewarm_max_time = data.get('rewarm_max_time')
-    #     ready_out_timeout = data.get('ready_out_timeout')
-    #     expire_date = result['到期日期']
-    #     product_date = result['生产日期']
-    #     z_offset = data.get('z_offset')
-    #     if_jiaoban = data.get('if_jiaoban')
-    #     jiaoban_rule = data.get('jiaoban_rule')
-    #     min_lc_time = data.get('min_lc_time')
-    #     out_chaoshi_auto_lc = data.get('out_chaoshi_auto_lc')
-    #     out_chaoshi_auto_lc_times = data.get('out_chaoshi_auto_lc_times')
-    #     if_back_after_jiaoban = data.get('if_back_after_jiaoban')
-    #     twice_chaoshi_jinzhi_in_binggui = data.get('twice_chaoshi_jinzhi_in_binggui')
-    #     twice_in_ku = data.get('twice_in_ku')
-    #     modify_datetime = datetime.now()
-    # else:
     # 获取请求数据
     model = data.get('model')
     model_sys_name = data.get('model_sys_name')
@@ -287,6 +261,20 @@ def add_model():
     if_back_after_jiaoban = data.get('if_back_after_jiaoban')
     twice_chaoshi_jinzhi_in_binggui = data.get('twice_chaoshi_jinzhi_in_binggui')
     twice_in_ku = data.get('twice_in_ku')
+    # 新增字段获取逻辑
+    separator = data.get('separator')
+    model_start = data.get('model_start')
+    model_separator_start = data.get('model_separator_start')
+    model_length = data.get('model_length')
+    production_date_start = data.get('production_date_start')
+    production_date_separator_start = data.get('production_date_separator_start')
+    production_date_length = data.get('production_date_length')
+    shelf_life_start = data.get('shelf_life_start')
+    shelf_life_separator_start = data.get('shelf_life_separator_start')
+    shelf_life_length = data.get('shelf_life_length')
+    expiration_date_start = data.get('expiration_date_start')
+    expiration_date_separator_start = data.get('expiration_date_separator_start')
+    expiration_date_length = data.get('expiration_date_length')
     modify_datetime = datetime.now()
 
     # 验证必要参数
@@ -324,7 +312,21 @@ def add_model():
             IfBackAfterJiaoban=if_back_after_jiaoban,
             TwiceChaoshiJinzhiInBinggui=twice_chaoshi_jinzhi_in_binggui,
             TwiceInKu=twice_in_ku,
-            ModifyDateTime=modify_datetime
+            ModifyDateTime=modify_datetime,
+            # 新增字段添加到实例中
+            Separator=separator,
+            ModelStart =model_start,
+            ModelSeparatorStart =model_separator_start,
+            ModelLength =model_length,
+            ProductionDateStart=production_date_start,
+            ProductionDateSeparatorStart=production_date_separator_start,
+            ProductionDateLength=production_date_length,
+            ShelfLifeStart=shelf_life_start,
+            ShelfLifeSeparatorStart=shelf_life_separator_start,
+            ShelfLifeLength=shelf_life_length,
+            ExpirationDateStart=expiration_date_start,
+            ExpirationDateSeparatorStart=expiration_date_separator_start,
+            ExpirationDateLength=expiration_date_length,
         )
 
         session.add(solder_model)
@@ -366,6 +368,20 @@ def edit_model():
     twice_chaoshi_jinzhi_in_binggui = data.get('twice_chaoshi_jinzhi_in_binggui')
     twice_in_ku = data.get('twice_in_ku')
     modify_datetime = datetime.now()
+    # 新增字段获取逻辑
+    separator = data.get('separator')
+    model_start = data.get('model_start')
+    model_separator_start = data.get('model_separator_start')
+    model_length = data.get('model_length')
+    production_date_start = data.get('production_date_start')
+    production_date_separator_start = data.get('production_date_separator_start')
+    production_date_length = data.get('production_date_length')
+    shelf_life_start = data.get('shelf_life_start')
+    shelf_life_separator_start = data.get('shelf_life_separator_start')
+    shelf_life_length = data.get('shelf_life_length')
+    expiration_date_start = data.get('expiration_date_start')
+    expiration_date_separator_start = data.get('expiration_date_separator_start')
+    expiration_date_length = data.get('expiration_date_length')
 
     # 验证必要参数
     if not all([model, model_sys_name]):
@@ -401,6 +417,22 @@ def edit_model():
         solder_model.TwiceChaoshiJinzhiInBinggui = twice_chaoshi_jinzhi_in_binggui
         solder_model.TwiceInKu = twice_in_ku
         solder_model.ModifyDateTime = modify_datetime
+        # 新增字段添加到实例中
+        solder_model.Separator = separator,
+        if model_start:
+            solder_model.ModelStart = int(model_start),
+        if model_separator_start:
+            solder_model.ModelSeparatorStart = int(model_separator_start),
+        solder_model.ModelLength = model_length,
+        solder_model.ProductionDateStart = production_date_start,
+        solder_model.ProductionDateSeparatorStart = production_date_separator_start,
+        solder_model.ProductionDateLength = production_date_length,
+        solder_model.ShelfLifeStart = shelf_life_start,
+        solder_model.ShelfLifeSeparatorStart = shelf_life_separator_start,
+        solder_model.ShelfLifeLength = shelf_life_length,
+        solder_model.ExpirationDateStart = expiration_date_start,
+        solder_model.ExpirationDateSeparatorStart = expiration_date_separator_start,
+        solder_model.ExpirationDateLength = expiration_date_length,
 
         session.commit()
         modbus_client.write_float(stir_time, 1526)
@@ -796,8 +828,9 @@ def lengcang_solder():
 def get_model_by_barcode():
     data = request.get_json()
     barcode = data.get("barcode")
+    result = parse_barcode(barcode)
 
     if not barcode:
         return Response.FAIL("条码不能为空")
 
-    return Response.SUCCESS(barcode)
+    return Response.SUCCESS(result)

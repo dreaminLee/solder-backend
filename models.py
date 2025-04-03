@@ -75,6 +75,7 @@ class Solder(db.Model):
     StationID = db.Column(db.Integer, nullable=False)  # 所在工位
     ExpireDate = db.Column(db.DateTime, nullable=False)  # 过期日期
     ProductDate = db.Column(db.DateTime, nullable=False)  # 生产日期
+    ShelfLife = db.Column(db.Integer, nullable=False)  # 保质期
     BackLCTimes = db.Column(db.Integer)  # 回冷藏区次数
     Common2 = db.Column(db.String(100))  # 通用2
     Common3 = db.Column(db.String(100))  # 通用3
@@ -106,6 +107,7 @@ class Solder(db.Model):
             'station_id': self.StationID,
             'product_date': None if self.ProductDate is None else self.ProductDate.strftime('%Y-%m-%d'),
             'expire_date': None if self.ExpireDate is None else self.ExpireDate.strftime('%Y-%m-%d'),
+            'shelf_life': self.ShelfLife,
             'BackLCTimes': self.BackLCTimes,
             'common2': self.Common2,
             'common3': self.Common3,
@@ -155,7 +157,20 @@ class SolderModel(db.Model):
     IfBackAfterJiaoban = db.Column(db.Integer, default=None)  # 搅拌后是否回冰柜
     TwiceChaoshiJinzhiInBinggui = db.Column(db.Integer, default=None)  # 二次超时禁止入冰柜
     TwiceInKu = db.Column(db.String(255), default=None)  # 再次入库选项
-
+    # 新增字段
+    Separator = db.Column(db.String(10), default=None)  # 分隔符
+    ModelStart = db.Column(db.Integer, default=None)  # 型号起始位置
+    ModelSeparatorStart = db.Column(db.Integer, default=None)  # 型号起始分隔符位置
+    ModelLength = db.Column(db.Integer, default=None)  # 型号长度
+    ProductionDateStart = db.Column(db.Integer, default=None)  # 生产日期起始位置
+    ProductionDateSeparatorStart = db.Column(db.Integer, default=None)  # 生产日期起始分隔符位置
+    ProductionDateLength = db.Column(db.Integer, default=None)  # 生产日期长度
+    ShelfLifeStart = db.Column(db.Integer, default=None)  # 保质期起始位置
+    ShelfLifeSeparatorStart = db.Column(db.Integer, default=None)  # 保质期起始分隔符位置
+    ShelfLifeLength = db.Column(db.Integer, default=None)  # 保质期长度
+    ExpirationDateStart = db.Column(db.Integer, default=None)  # 过期日期起始位置
+    ExpirationDateSeparatorStart = db.Column(db.Integer, default=None)  # 过期日期起始分隔符位置
+    ExpirationDateLength = db.Column(db.Integer, default=None)  # 过期日期长度
     def to_dict(self):
         return {
             'model': self.Model,
@@ -178,7 +193,21 @@ class SolderModel(db.Model):
             'out_chaoshi_auto_lc_times': self.OutChaoshiAutoLcTimes,
             'if_back_after_jiaoban': self.IfBackAfterJiaoban,
             'twice_chaoshi_jinzhi_in_binggui': self.TwiceChaoshiJinzhiInBinggui,
-            'twice_in_ku': self.TwiceInKu
+            'twice_in_ku': self.TwiceInKu,
+            # 新增字段
+            'separator': self.Separator,
+            'model_start': self.ModelStart,
+            'model_separator_start': self.ModelSeparatorStart,
+            'model_length': self.ModelLength,
+            'production_date_start': self.ProductionDateStart,
+            'production_date_separator_start': self.ProductionDateSeparatorStart,
+            'production_date_length': self.ProductionDateLength,
+            'shelf_life_start': self.ShelfLifeStart,
+            'shelf_life_separator_start': self.ShelfLifeSeparatorStart,
+            'shelf_life_length': self.ShelfLifeLength,
+            'expiration_date_start': self.ExpirationDateStart,
+            'expiration_date_separator_start': self.ExpirationDateSeparatorStart,
+            'expiration_date_length': self.ExpirationDateLength
         }
 
 
