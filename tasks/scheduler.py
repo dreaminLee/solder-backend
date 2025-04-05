@@ -30,26 +30,7 @@ logging.getLogger('apscheduler').setLevel(logging.WARNING)
 scheduler =  APScheduler()
 # 本地文件路径
 file_path = "res_asc.txt"
-def check_string(s):
-    # 条件 1: 位置 4-9 为六位数字
-    condition_1 = bool(re.match(r".{3}(\d{6})", s))  # 匹配位置 4-9 为六位数字
 
-    # 条件 2: 位置 10-14 为五位数字
-    condition_2 = bool(re.match(r".{9}(\d{5})", s))  # 匹配位置 10-14 为五位数字
-
-    # 条件 3: 存在 3 个 “&” 符号
-    condition_3 = s.count("&") == 3  # 检查是否存在 3 个 & 符号
-
-    # 条件 4: 第 15 位是符号 "&"
-    condition_4 = len(s) >= 15 and s[14] == "&"  # 检查第 15 位是否为 "&"
-
-    # 返回是否符合所有条件
-    return condition_1 and condition_2 and condition_3 and condition_4
-
-def check_string2(s):
-    condition_1 = s.count("+") >= 5
-
-    return condition_1
 from datetime import datetime, timedelta
 
 # 初始化601、602、801、802点位为11
@@ -605,10 +586,10 @@ def move_update(mode):
             with open(file_path, "w") as file:
                 file.write(res_asc)
             logger.info(f"读到条码{res_asc}")
-            if check_string2(res_asc):
+            code = res_asc
+            result = parse_barcode(code)
+            if result:
                 # 提取型号、生产日期
-                code=res_asc
-                result = parse_barcode(code)
                 # parts = code.split('+')
                 # model = parts[4] if len(parts) > 4 else None
                 # productDate = parts[2] if len(parts) > 4 else None
@@ -616,21 +597,6 @@ def move_update(mode):
                 productDate = result['product_date']
                 expireDate = result['expire_date']
                 shelfLife = result['shelf_life']
-                # 尝试将其转换为正确的日期时间格式
-                # try:
-                #     # 假设前两位是年份，中间两位是月份，后两位是日期
-                #     year = 2000 + int(productDate[:2])
-                #     month = int(productDate[2:4])
-                #     day = int(productDate[4:])
-                #     # 检查日期是否合法
-                #     if 1 <= month <= 12 and 1 <= day <= 31:
-                #         productDate = datetime.datetime(year, month, day)
-                #     else:
-                #         # 处理不合法的日期，例如设置为默认值
-                #         productDate = None
-                # except ValueError:
-                #     # 处理转换失败的情况，例如设置为默认值
-                #     productDate = None
 
                 logger.info(f"根据扫描到的条码解析到了型号：{model}")
                 logger.info(f"根据扫描到的条码解析到了生产日期：{productDate}")
