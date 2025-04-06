@@ -28,5 +28,34 @@ class REGION_TYPE(Enum):
     COLD   = 2
     REWARM = 3
     WAIT   = 4
+    FETCH  = 5
 
 
+ADDR_REGION_ENTER_START  = 901
+ADDR_REGION_ENTER_END    = 928
+ADDR_REGION_SCAN_START   = 990
+ADDR_REGION_SCAN_END     = 991
+ADDR_REGION_COLD_START   = 201
+ADDR_REGION_COLD_END     = 580
+ADDR_REGION_REWARM_START = 601
+ADDR_REGION_REWARM_END   = 700
+ADDR_REGION_WAIT_START   = 801
+ADDR_REGION_WAIT_END     = 840
+ADDR_REGION_FETCH_START  = 891
+ADDR_REGION_FETCH_END    = 892
+
+
+def region_addr_to_region_name(addr):
+    if ADDR_REGION_ENTER_START  <= addr and addr <= ADDR_REGION_ENTER_END:
+        return "入柜区"
+    if ADDR_REGION_SCAN_START   <= addr and addr <= ADDR_REGION_SCAN_END:
+        return "扫码区"
+    if ADDR_REGION_COLD_START   <= addr and addr <= ADDR_REGION_COLD_END:
+        return "冷藏区"
+    if ADDR_REGION_REWARM_START <= addr and addr <= ADDR_REGION_REWARM_END:
+        return "回温区"
+    if ADDR_REGION_WAIT_START   <= addr and addr <= ADDR_REGION_WAIT_END:
+        return "待取区"
+    if ADDR_REGION_FETCH_START  <= addr and addr <= ADDR_REGION_FETCH_END:
+        return "取料区"
+    return "未知"
