@@ -279,8 +279,8 @@ class SolderFlowRecord(db.Model):
     __tablename__ = 'solderflowrecord'
     id = db.Column(db.Integer, primary_key=True,  autoincrement=True)
     SolderCode = db.Column(db.String(100), nullable=False)  # 锡膏码
-    UserID = db.Column(db.String(100), nullable=False)  # 工号
-    UserName = db.Column(db.String(100), nullable=False)  # 姓名
+    UserID = db.Column(db.String(100))  # 工号
+    UserName = db.Column(db.String(100))  # 姓名
     Type = db.Column(db.String(100), nullable=False)  # 类型
     DateTime = db.Column(db.DateTime, nullable=False)  # 日期时间
 
