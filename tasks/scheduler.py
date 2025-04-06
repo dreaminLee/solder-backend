@@ -13,6 +13,8 @@ from sqlalchemy import or_
 
 from modbus.client import modbus_client
 from modbus.scan import scan
+from modbus.modbus_addresses import ADDR_ROBOT_STATUS, ADDR_ROBOT_CONFIRM
+from modbus.modbus_addresses import ADDR_SCANNER_STATUS, ADDR_SCANNER_CONFIRM
 from models import Station, Solder, SolderModel, SolderFlowRecord, User, Alarm
 from util.MES_request import schedule_get_token, send_freeze_log, send_reheat_log, send_mix_log
 from util.db_connection import db_instance
@@ -81,9 +83,9 @@ def process_solders():
     # 各个位置取放时交互信息
     try:
         # 查询 Station 表并插入 Solder 数据逻辑
-        qu = modbus_client.modbus_read("jcq", 100, 1)
-        fang = modbus_client.modbus_read("jcq", 101, 1)
-        result = modbus_client.modbus_read("jcq", 102, 1)
+        qu = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.GET, 1)
+        fang = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.PUT, 1)
+        result = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.ACT, 1)
         sta_types = [f"移动模组[{qu[0]}]", f"移动模组[{fang[0]}]"]
         # 获取对应的 Station 对象
         station_qu = StaType_station_dict.get(sta_types[0])
@@ -115,9 +117,9 @@ def process_solders():
                             logger.error(
                                 f"{solder_record.SolderCode}在搅拌区设置搅拌参数出错 未找到solder_model_record")
 
-                modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                modbus_client.modbus_write("jcq", result[0], 107, 1)
+                modbus_client.modbus_write("jcq", qu[0], ADDR_ROBOT_CONFIRM.GET, 1)
+                modbus_client.modbus_write("jcq", fang[0], ADDR_ROBOT_CONFIRM.PUT, 1)
+                modbus_client.modbus_write("jcq", result[0], ADDR_ROBOT_CONFIRM.ACT, 1)
                 logger.info(f"预约:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
             else:
                 logger.error(f"没有找到符合 StaType '{station_qu}' 的 StationID")
@@ -194,9 +196,9 @@ def process_solders():
                             # modbus_client.modbus_write("jcq", result[0], 107, 1)
                             # logger.info(f"预约:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
                         session.commit()
-                        modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                        modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                        modbus_client.modbus_write("jcq", result[0], 107, 1)
+                        modbus_client.modbus_write("jcq", qu[0], ADDR_ROBOT_CONFIRM.GET, 1)
+                        modbus_client.modbus_write("jcq", fang[0], ADDR_ROBOT_CONFIRM.PUT, 1)
+                        modbus_client.modbus_write("jcq", result[0], ADDR_ROBOT_CONFIRM.ACT, 1)
                         logger.info(f"放完成:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
                     except IntegrityError as e:
                         # 捕获 IntegrityError 错误，处理唯一键冲突
@@ -278,9 +280,9 @@ def process_solders():
                         logger.warning("===============出柜状态5：未找到solderflowrecord===============")
                     # 提交事务
                     session.commit()
-                    modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                    modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                    modbus_client.modbus_write("jcq", result[0], 107, 1)
+                    modbus_client.modbus_write("jcq", qu[0], ADDR_ROBOT_CONFIRM.GET, 1)
+                    modbus_client.modbus_write("jcq", fang[0], ADDR_ROBOT_CONFIRM.PUT, 1)
+                    modbus_client.modbus_write("jcq", result[0], ADDR_ROBOT_CONFIRM.ACT, 1)
                     logger.info(f"预约:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
                     logger.info(f"条码` '{solder_code}' 已删除并标记为出柜")
                 else:
@@ -574,9 +576,9 @@ def move_update(mode):
     # 扫码位置成功扫码
     try:
         # 读取 Modbus 数据逻辑
-        result = modbus_client.modbus_read("jcq", 111, 1)
+        result = modbus_client.modbus_read("jcq", ADDR_SCANNER_STATUS.REQ, 1)
         if result[0] == 1:
-            location = modbus_client.modbus_read("jcq", 110, 1)[0]
+            location = modbus_client.modbus_read("jcq", ADDR_SCANNER_STATUS.POS, 1)[0]
             # res_asc = modbus_client.read_float_ASCII(115, 134)
             res_asc = scan()
             # 清空文件内容
@@ -600,8 +602,8 @@ def move_update(mode):
 
                 logger.info(f"根据扫描到的条码解析到了型号：{model}")
                 logger.info(f"根据扫描到的条码解析到了生产日期：{productDate}")
-                modbus_client.modbus_write("jcq", 1, 141, 1)
-                modbus_client.modbus_write("jcq", location, 140, 1)
+                modbus_client.modbus_write("jcq", 1, ADDR_SCANNER_CONFIRM.RET, 1)
+                modbus_client.modbus_write("jcq", location, ADDR_SCANNER_CONFIRM.POS, 1)
                 # modbus_client.write_ascii_string(145, res_asc)
 
                 # 读取 user_cache.txt 中的 UserID
@@ -681,11 +683,11 @@ def move_update(mode):
 
             else:
                 logger.info(f"异常条码{res_asc}")
-                modbus_client.modbus_write("jcq", 2, 141, 1)
-                modbus_client.modbus_write("jcq", location, 140, 1)
+                modbus_client.modbus_write("jcq", 2, ADDR_SCANNER_CONFIRM.RET, 1)
+                modbus_client.modbus_write("jcq", location, ADDR_SCANNER_CONFIRM.POS, 1)
         else:
-            modbus_client.modbus_write("jcq", 0, 140, 1)
-            modbus_client.modbus_write("jcq", 0, 141, 1)
+            modbus_client.modbus_write("jcq", 0, ADDR_SCANNER_CONFIRM.RET, 1)
+            modbus_client.modbus_write("jcq", 0, ADDR_SCANNER_CONFIRM.POS, 1)
             modbus_client.modbus_write("jcq", 0, 145, 25)
     except Exception as e:
         session.close()
@@ -697,9 +699,9 @@ def move_update(mode):
     #各个位置取放时交互信息
     try:
         # 查询 Station 表并插入 Solder 数据逻辑
-        qu = modbus_client.modbus_read("jcq", 100, 1)
-        fang = modbus_client.modbus_read("jcq", 101, 1)
-        result = modbus_client.modbus_read("jcq", 102, 1)
+        qu = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.GET, 1)
+        fang = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.PUT, 1)
+        result = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.ACT, 1)
         sta_types = [f"移动模组[{qu[0]}]", f"移动模组[{fang[0]}]"]
         # 获取对应的 Station 对象
         station_qu = StaType_station_dict.get(sta_types[0])
@@ -734,9 +736,9 @@ def move_update(mode):
                             logger.info(f"{solder_record.SolderCode}在搅拌区设置搅拌参数成功 时间{solder_model_record.StirSpeed}速度{solder_model_record.StirTime}")
                         else:
                             logger.error(f"{solder_record.SolderCode}在搅拌区设置搅拌参数出错 未找到solder_model_record")
-                modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                modbus_client.modbus_write("jcq", result[0], 107, 1)
+                modbus_client.modbus_write("jcq", qu[0], ADDR_ROBOT_CONFIRM.GET, 1)
+                modbus_client.modbus_write("jcq", fang[0], ADDR_ROBOT_CONFIRM.PUT, 1)
+                modbus_client.modbus_write("jcq", result[0], ADDR_ROBOT_CONFIRM.ACT, 1)
                 logger.info(f"状态{result[0]} :从{qu[0]}移动到{fang[0]}")
 
             else:
@@ -850,9 +852,9 @@ def move_update(mode):
                             logger.info("发送回温日志")
                             logger.info("发送回温日志")
                         session.commit()
-                        modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                        modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                        modbus_client.modbus_write("jcq", result[0], 107, 1)
+                        modbus_client.modbus_write("jcq", qu[0], ADDR_ROBOT_CONFIRM.GET, 1)
+                        modbus_client.modbus_write("jcq", fang[0], ADDR_ROBOT_CONFIRM.PUT, 1)
+                        modbus_client.modbus_write("jcq", result[0], ADDR_ROBOT_CONFIRM.ACT, 1)
                         logger.info(f"放完成:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
                     except IntegrityError as e:
                         # 捕获 IntegrityError 错误，处理唯一键冲突
@@ -891,9 +893,9 @@ def move_update(mode):
                     # 提交事务
                     session.commit()
                     logger.info(f"条码` '{solder_code}' 已出柜，并且已删除")
-                    modbus_client.modbus_write("jcq", qu[0], 105, 1)
-                    modbus_client.modbus_write("jcq", fang[0], 106, 1)
-                    modbus_client.modbus_write("jcq", result[0], 107, 1)
+                    modbus_client.modbus_write("jcq", qu[0], ADDR_ROBOT_CONFIRM.GET, 1)
+                    modbus_client.modbus_write("jcq", fang[0], ADDR_ROBOT_CONFIRM.PUT, 1)
+                    modbus_client.modbus_write("jcq", result[0], ADDR_ROBOT_CONFIRM.ACT, 1)
                     logger.info(f"人工取走:状态{result[0]} :从{qu[0]}移动到{fang[0]}")
                 else:
                     logger.error(f"{station_fang}点位没有找到 Solder 记录")
