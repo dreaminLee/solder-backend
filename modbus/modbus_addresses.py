@@ -31,10 +31,11 @@ class REGION_TYPE(Enum):
     FETCH  = 5
 
 
+ADDR_STIRING_STATUS = 741
+
 ADDR_REGION_ENTER_START  = 901
 ADDR_REGION_ENTER_END    = 928
-ADDR_REGION_SCAN_START   = 990
-ADDR_REGION_SCAN_END     = 991
+ADDR_REGION_SCAN         = 190 # 仅作识别使用，禁止读写
 ADDR_REGION_COLD_START   = 201
 ADDR_REGION_COLD_END     = 580
 ADDR_REGION_REWARM_START = 601
@@ -48,14 +49,15 @@ ADDR_REGION_FETCH_END    = 892
 def region_addr_to_region_name(addr):
     if ADDR_REGION_ENTER_START  <= addr and addr <= ADDR_REGION_ENTER_END:
         return "入柜区"
-    if ADDR_REGION_SCAN_START   <= addr and addr <= ADDR_REGION_SCAN_END:
+    elif ADDR_REGION_SCAN == addr:
         return "扫码区"
-    if ADDR_REGION_COLD_START   <= addr and addr <= ADDR_REGION_COLD_END:
+    elif ADDR_REGION_COLD_START   <= addr and addr <= ADDR_REGION_COLD_END:
         return "冷藏区"
-    if ADDR_REGION_REWARM_START <= addr and addr <= ADDR_REGION_REWARM_END:
+    elif ADDR_REGION_REWARM_START <= addr and addr <= ADDR_REGION_REWARM_END:
         return "回温区"
-    if ADDR_REGION_WAIT_START   <= addr and addr <= ADDR_REGION_WAIT_END:
+    elif ADDR_REGION_WAIT_START   <= addr and addr <= ADDR_REGION_WAIT_END:
         return "待取区"
-    if ADDR_REGION_FETCH_START  <= addr and addr <= ADDR_REGION_FETCH_END:
+    elif ADDR_REGION_FETCH_START  <= addr and addr <= ADDR_REGION_FETCH_END:
         return "取料区"
-    return "未知"
+    else:
+        return "未知"
