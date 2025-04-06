@@ -44,7 +44,7 @@ def login():
     # print(user_ic)
     if mysqlAdminDO is None:
         return Response.FAIL("用户不存在")
-    if user_ic is None:
+    if user_ic is None or user_ic == "":
         mysql_password = mysqlAdminDO.Password
         print(mysql_password)
         if password != mysql_password:
