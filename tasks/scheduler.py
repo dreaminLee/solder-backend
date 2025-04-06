@@ -23,6 +23,7 @@ from util.parse import parse_barcode
 
 from .task_heartbeat import task_heartbeat
 from .task_freeze import lc_mode
+from .task_scan import task_scan
 
 # 设置 APScheduler 日志级别为 WARNING
 logging.getLogger('apscheduler').setLevel(logging.WARNING)
@@ -573,128 +574,6 @@ def move_update(mode):
         elif 803 <= station_id <= 840:
             count_by_model[model]["count_803_840"] += 1
 
-    # 扫码位置成功扫码
-    try:
-        # 读取 Modbus 数据逻辑
-        result = modbus_client.modbus_read("jcq", ADDR_SCANNER_STATUS.REQ, 1)
-        if result[0] == 1:
-            location = modbus_client.modbus_read("jcq", ADDR_SCANNER_STATUS.POS, 1)[0]
-            # res_asc = modbus_client.read_float_ASCII(115, 134)
-            res_asc = scan()
-            # 清空文件内容
-            with open(file_path, "w") as file:
-                file.truncate(0)
-            # 将 res_asc 写入本地文件
-            with open(file_path, "w") as file:
-                file.write(res_asc)
-            logger.info(f"读到条码{res_asc}")
-            code = res_asc
-            result = parse_barcode(code)
-            if result:
-                # 提取型号、生产日期
-                # parts = code.split('+')
-                # model = parts[4] if len(parts) > 4 else None
-                # productDate = parts[2] if len(parts) > 4 else None
-                model = result['model']
-                productDate = result['product_date']
-                expireDate = result['expire_date']
-                shelfLife = result['shelf_life']
-
-                logger.info(f"根据扫描到的条码解析到了型号：{model}")
-                logger.info(f"根据扫描到的条码解析到了生产日期：{productDate}")
-                modbus_client.modbus_write("jcq", 1, ADDR_SCANNER_CONFIRM.RET, 1)
-                modbus_client.modbus_write("jcq", location, ADDR_SCANNER_CONFIRM.POS, 1)
-                # modbus_client.write_ascii_string(145, res_asc)
-
-                # 读取 user_cache.txt 中的 UserID
-                user_cache_file = "user_cache.txt"
-                with open(user_cache_file, "r") as file:
-                    user_id = file.read()
-                user_name=""
-                if user_id:
-                    # 查询 User 表中的 UserName
-                    user = session.query(User).filter_by(UserID=user_id).first()
-                    if user:
-                        user_name = user.UserName
-                    else:
-                        user_name = "未知用户"  # 如果没有找到对应用户，可以设置为默认值
-
-                # 查询是否已经存在相同的 SolderCode 数据
-                existing_solder = session.query(Solder).filter(Solder.SolderCode == code).first()
-                if existing_solder and (existing_solder.StationID==190 or existing_solder.Station.StationID==191):
-                    # 更新现有记录
-                    existing_solder.SolderCode = code
-                    existing_solder.Model = model
-                    # existing_solder.ProductDate = productDate
-                    # existing_solder.ExpireDate = expireDate
-                    existing_solder.ShelfLife = shelfLife
-                    existing_solder.InTimes += 1
-                    existing_solder.StorageUser = user_name
-                    existing_solder.StorageDateTime = datetime.now()
-                    if user_name:
-                        # 创建 SolderFlowRecord 记录
-                        solder_flow_record = SolderFlowRecord(
-                            SolderCode=code,
-                            UserID=user_id,
-                            UserName=user_name,
-                            DateTime=datetime.now(),
-                            Type="请求入柜"  # 设置操作类型为“更新入柜”
-                        )
-                        session.add(solder_flow_record)
-                        session.commit()
-                    # 提交更新的 Solder 数据
-                    session.commit()
-                    solder_data.append(existing_solder)
-                    logger.info(f"当前Station存在锡膏，已更新 Solder 扫码入库：{code}")
-                else:
-                    #查询此前该锡膏的入柜次数
-                    inTimes=session.query(SolderFlowRecord).join(Solder,Solder.SolderCode==SolderFlowRecord.SolderCode).filter(SolderFlowRecord.Type=="请求入柜").count()
-                    # 插入新的 Solder 数据
-                    sql_data = Solder(
-                        SolderCode=code,
-                        Model=model,
-                        # ProductDate=productDate,
-                        # ExpireDate=expireDate,
-                        # ShelfLife = shelfLife,
-                        InTimes=inTimes+1,
-                        BackLCTimes=0,
-                        StationID=190,
-                        StorageUser=user_name,
-                        StorageDateTime=datetime.now()
-                    )
-                    if user_name:
-                        # 创建 SolderFlowRecord 记录
-                        solder_flow_record = SolderFlowRecord(
-                            SolderCode=code,
-                            UserID=user_id,
-                            UserName=user_name,
-                            DateTime=datetime.now(),
-                            Type="请求入柜"  # 设置操作类型为“请求入柜”
-                        )
-                        session.add(solder_flow_record)
-                        session.commit()
-                    session.add(sql_data)
-                    session.commit()
-                    solder_data.append(sql_data)
-                    logger.info(f"新 Solder 数据添加成功：{code}")
-                # 提交事务
-                session.commit()
-                logger.info(f"{code}已经从 '扫码区' 取出，放入冷藏区")
-
-            else:
-                logger.info(f"异常条码{res_asc}")
-                modbus_client.modbus_write("jcq", 2, ADDR_SCANNER_CONFIRM.RET, 1)
-                modbus_client.modbus_write("jcq", location, ADDR_SCANNER_CONFIRM.POS, 1)
-        else:
-            modbus_client.modbus_write("jcq", 0, ADDR_SCANNER_CONFIRM.RET, 1)
-            modbus_client.modbus_write("jcq", 0, ADDR_SCANNER_CONFIRM.POS, 1)
-            modbus_client.modbus_write("jcq", 0, 145, 25)
-    except Exception as e:
-        session.close()
-        logger.error(f"Error in periodic task (Modbus read/write): {e}")
-        return
-    except TimeoutError:
-        logger.warning("任务执行超时，跳过当前任务")
 
     #各个位置取放时交互信息
     try:
@@ -1197,6 +1076,7 @@ def run_scheduler():
         lc_mode()
         #scheduler.add_job(id='lc_mode', func=lc_mode, trigger='interval', seconds=2, max_instances=100)
     elif mode == 1:
+        task_scan()
         move_update(mode=mode)
         process_solders()
         # scheduler.add_job(id='move_update', func=move_update, trigger='interval', seconds=2, max_instances=100,kwargs={'mode': mode})
