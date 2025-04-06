@@ -37,9 +37,9 @@ class Alarm(db.Model):
 
     ID =  db.Column(db.Integer, primary_key=True, autoincrement=True)
     AlarmText =  db.Column(db.String(100), nullable=False)
-    StartTime =  db.Column(db.DateTime, nullable=True)
-    EndTime = db.Column(db.DateTime, nullable=True)
-    Kind = db.Column(db.String(10), nullable=True)
+    StartTime =  db.Column(db.DateTime)
+    EndTime = db.Column(db.DateTime)
+    Kind = db.Column(db.String(10))
 
     def to_dict(self):
         return {
@@ -90,12 +90,12 @@ class Solder(db.Model):
     ReadyOutDateTime = db.Column(db.DateTime)  # 准备出柜时间
     OutUser = db.Column(db.String(100))  # 取出人
     OutDateTime = db.Column(db.DateTime)  # 取出时间
-    Decoded = db.Column(db.Boolean, nullable=False, default=False)  # 是否解码
+    Decoded = db.Column(db.Boolean)  # 是否解码
     DecodedUser = db.Column(db.String(100))  # 解码人
     DecodedDateTime = db.Column(db.DateTime)  # 解码时间
-    InTimes = db.Column(db.Integer, nullable=False)  # 入柜次数
-    CurrentFlow = db.Column(db.Integer, nullable=False)  # 当前流程
-    Code = db.Column(db.String(200), nullable=False)  # 二维码
+    InTimes = db.Column(db.Integer)  # 入柜次数
+    CurrentFlow = db.Column(db.Integer)  # 当前流程
+    Code = db.Column(db.String(200))  # 二维码
     WorkNum = db.Column(db.String(100))  # 工单号
     MesError = db.Column(db.String(200))  # 其它错误内容
     AgainColdDateTime = db.Column(db.DateTime)  # 再次冷藏时间
@@ -138,17 +138,17 @@ class SolderModel(db.Model):
 
     Model = db.Column(db.String(100), primary_key=True)  # 型号
     ModelSysName = db.Column(db.String(100), nullable=False, unique=True)  # 系统名称
-    MinColdNum = db.Column(db.Integer, nullable=False)  # 最小冷藏数
-    RewarmNum = db.Column(db.Integer, nullable=False)  # 回温次数
-    ReadyOutNum = db.Column(db.Integer, nullable=False)  # 准备出柜次数
+    MinColdNum = db.Column(db.Integer)  # 最小冷藏数
+    RewarmNum = db.Column(db.Integer, nullable=False)  # 保持回温数量
+    ReadyOutNum = db.Column(db.Integer, nullable=False)  # 保持待取数量
     StirTime = db.Column(db.Integer, nullable=False)  # 搅拌时间
     StirSpeed = db.Column(db.Integer, nullable=False)  # 搅拌速度
     RewarmTime = db.Column(db.Integer, nullable=False)  # 回温时间
     RewarmMaxTime = db.Column(db.Integer, nullable=False)  # 最大回温时间
-    ReadyOutTimeOut = db.Column(db.Integer, nullable=False)  # 准备出柜超时
-    ShelfLife = db.Column(db.Integer, nullable=False)  # 保质期
-    ZOffSet = db.Column(db.Float, nullable=False)  # Z轴偏移
-    ModifyDateTime = db.Column(db.DateTime, nullable=False)  # 修改时间
+    ReadyOutTimeOut = db.Column(db.Integer, nullable=False)  # 待取区超时时间
+    ShelfLife = db.Column(db.Integer)  # 保质期
+    ZOffSet = db.Column(db.Float)  # Z轴偏移
+    ModifyDateTime = db.Column(db.DateTime)  # 修改时间
     IfJiaoban = db.Column(db.String(255), default=None)  # 首次出库是否搅拌
     JiaobanRule = db.Column(db.String(255), default=None)  # 搅拌规则
     MinLcTime = db.Column(db.Integer, default=None)  # 最小冷藏时间
