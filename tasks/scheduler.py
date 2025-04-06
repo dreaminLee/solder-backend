@@ -653,7 +653,7 @@ def move_update(mode):
                         Model=model,
                         # ProductDate=productDate,
                         # ExpireDate=expireDate,
-                        ShelfLife = shelfLife,
+                        # ShelfLife = shelfLife,
                         InTimes=inTimes+1,
                         BackLCTimes=0,
                         StationID=190,
@@ -1210,7 +1210,7 @@ def init_scheduler(app):
     # else:
     #     scheduler.add_job(id='move_update', func=move_update, trigger='interval', seconds=2, max_instances=100,kwargs={'mode': mode})
     scheduler.add_job(id='task_heartbeat', func=task_heartbeat, trigger='interval', seconds=1, max_instances=1)
-    scheduler.add_job(id='run_scheduler', func=run_scheduler, trigger='interval', seconds=2, max_instances=1)
+    scheduler.add_job(id='run_scheduler', func=run_scheduler, trigger='interval', seconds=2, max_instances=1, misfire_grace_time=1)
     if not scheduler.running:
         # 确保调度器正在运行，如果不是可以重启调度器或处理该情况
         scheduler.start()

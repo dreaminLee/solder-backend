@@ -73,9 +73,9 @@ class Solder(db.Model):
     SolderCode = db.Column(db.String(100), primary_key=True)  # 锡膏码
     Model = db.Column(db.String(100), nullable=False)  # 型号
     StationID = db.Column(db.Integer, nullable=False)  # 所在工位
-    ExpireDate = db.Column(db.DateTime, nullable=False)  # 过期日期
-    ProductDate = db.Column(db.DateTime, nullable=False)  # 生产日期
-    ShelfLife = db.Column(db.Integer, nullable=False)  # 保质期
+    ExpireDate = db.Column(db.DateTime)  # 过期日期
+    ProductDate = db.Column(db.DateTime)  # 生产日期
+    ShelfLife = db.Column(db.Integer)  # 保质期
     BackLCTimes = db.Column(db.Integer)  # 回冷藏区次数
     Common2 = db.Column(db.String(100))  # 通用2
     Common3 = db.Column(db.String(100))  # 通用3
