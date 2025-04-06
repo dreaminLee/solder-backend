@@ -10,6 +10,7 @@ import pytz
 from apscheduler.executors.pool import ThreadPoolExecutor
 from flask_apscheduler import APScheduler
 from sqlalchemy import or_
+from time import sleep
 
 from modbus.client import modbus_client
 from modbus.scan import scan
@@ -1074,25 +1075,21 @@ def run_scheduler():
     mode = read_mode()
     if mode == 0:
         lc_mode()
-        #scheduler.add_job(id='lc_mode', func=lc_mode, trigger='interval', seconds=2, max_instances=100)
     elif mode == 1:
         task_scan()
         move_update(mode=mode)
         process_solders()
-        # scheduler.add_job(id='move_update', func=move_update, trigger='interval', seconds=2, max_instances=100,kwargs={'mode': mode})
-        # scheduler.add_job(id='move_update', func=move_update, trigger='interval', seconds=2, max_instances=100,kwargs={'mode': mode})
 
-# 初始化调度器
+def infinite_loop(func, interval=1):
+    while True:
+        func()
+        sleep(interval)
+
+
 def init_scheduler(app):
     scheduler.init_app(app)
-    # if mode == 0:
-    #     scheduler.add_job(id='lc_mode', func=lc_mode, trigger='interval', seconds=2, max_instances=100)
-    # elif mode == 1:
-    #     scheduler.add_job(id='move_update', func=move_update, trigger='interval', seconds=2, max_instances=100,kwargs={'mode': mode})
-    # else:
-    #     scheduler.add_job(id='move_update', func=move_update, trigger='interval', seconds=2, max_instances=100,kwargs={'mode': mode})
-    scheduler.add_job(id='task_heartbeat', func=task_heartbeat, trigger='interval', seconds=1, max_instances=1)
-    scheduler.add_job(id='run_scheduler', func=run_scheduler, trigger='interval', seconds=2, max_instances=1, misfire_grace_time=1)
+    scheduler.add_job(id='task_heartbeat', func=task_heartbeat, trigger='interval', seconds=1)
+    scheduler.add_job(id='run_scheduler', func=infinite_loop, args=(run_scheduler,), trigger='date', next_run_time=datetime.now())
     if not scheduler.running:
         # 确保调度器正在运行，如果不是可以重启调度器或处理该情况
         scheduler.start()
