@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 class ModbusClientSingleton:
     _instance = None
-    _client = None
+    _client: ModbusTcpClient = None
 
     def __new__(cls, host=tcp_host, port=tcp_port):
         """创建单例客户端，并在创建时自动连接设备"""

@@ -19,14 +19,21 @@ def task_freeze():
 
     session.close()
 
-    for stationID in range(ADDR_REGION_COLD_START, ADDR_REGION_COLD_END+1):
-        # 冷藏区的锡膏状态设成0（不可取不可放）
-        modbus_client.modbus_write("jcq", 0 if stationID in solder_stationID_list_cold else 1, stationID, 1)
+    """
+        冷藏区的锡膏状态设成0（不可取不可放）
+        回温区的锡膏状态设成5（异常）
+        待取区的锡膏状态设成5（异常）
+    """
+    station_status_cold   = [0 if stationID in   solder_stationID_list_cold else 1 for stationID in range(  ADDR_REGION_COLD_START,   ADDR_REGION_COLD_END+1)]
+    station_status_rewarm = [5 if stationID in solder_stationID_list_rewarm else 0 for stationID in range(ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END+1)]
+    station_status_wait   = [5 if stationID in   solder_stationID_list_wait else 0 for stationID in range(  ADDR_REGION_WAIT_START,   ADDR_REGION_WAIT_END+1)]
 
-    for stationID in range(ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END+1):
-        # 回温区的锡膏状态设成5（异常）
-        modbus_client.modbus_write("jcq", 5 if stationID in solder_stationID_list_rewarm else 0, stationID, 1)
+    bulk_len = 100
+    for bulk_start in range(0, len(station_status_cold), bulk_len):
+        modbus_client._client.write_registers(bulk_start + ADDR_REGION_COLD_START, station_status_cold[bulk_start : bulk_start+bulk_len if bulk_start+bulk_len < len(station_status_cold) else None], unit=0)
 
-    for stationID in range(ADDR_REGION_WAIT_START, ADDR_REGION_WAIT_END+1):
-        # 待取区的锡膏状态设成5（异常）
-        modbus_client.modbus_write("jcq", 5 if stationID in solder_stationID_list_wait else 0, stationID, 1)
+    for bulk_start in range(0, len(station_status_rewarm), bulk_len):
+        modbus_client._client.write_registers(bulk_start + ADDR_REGION_REWARM_START, station_status_rewarm[bulk_start : bulk_start+bulk_len if bulk_start+bulk_len < len(station_status_rewarm) else None], unit=0)
+
+    for bulk_start in range(0, len(station_status_wait), bulk_len):
+        modbus_client._client.write_registers(bulk_start + ADDR_REGION_WAIT_START, station_status_wait[bulk_start : bulk_start+bulk_len if bulk_start+bulk_len < len(station_status_wait) else None], unit=0)
