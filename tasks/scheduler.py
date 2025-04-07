@@ -26,7 +26,7 @@ from util.logger import logger
 from util.parse import parse_barcode
 
 from .task_heartbeat import task_heartbeat
-from .task_freeze import lc_mode
+from .task_freeze import task_freeze
 from .task_scan import task_scan
 from .task_robot import task_robot
 
@@ -648,7 +648,8 @@ def read_mode():
 def run_scheduler():
     mode = read_mode()
     if mode == 0:
-        lc_mode()
+        task_robot()
+        task_freeze()
     elif mode == 1:
         task_scan()
         task_robot()
