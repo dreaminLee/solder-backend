@@ -19,16 +19,16 @@ def task_robot():
 
         stations = db_session.query(Station).filter(Station.StationID.notin_([601, 602, 801, 802])).all()
         StaType_station_dict = {station.StaType: station.StationID for station in stations} # 移动模组[id]: 点位地址
-        solders = db_session.query(Solder).all()
 
         station_get = StaType_station_dict.get(f"移动模组[{robot_get}]")
         station_put = StaType_station_dict.get(f"移动模组[{robot_put}]")
-        station_get_status = modbus_client.modbus_read("jcq", station_get, 1)[0] if station_get else 0
-        station_put_status = modbus_client.modbus_read("jcq", station_put, 1)[0] if station_put else 0
+        station_get_status = modbus_client.modbus_read("jcq", station_get, 1)[0] if station_get else -1
+        station_put_status = modbus_client.modbus_read("jcq", station_put, 1)[0] if station_put else -1
         logger.info(f"机械臂状态: {robot_act}")
         logger.info(f"取库位号: {region_addr_to_region_name(station_get)}{station_get} 状态{station_get_status}")
         logger.info(f"放库位号: {region_addr_to_region_name(station_put)}{station_put} 状态{station_put_status}")
-        solder_getting = next((solder for solder in solders if solder.StationID == station_get), None)
+        solder_getting = db_session.query(Solder).filter(Solder.StationID == station_get).scalar()
+        solder_putting = db_session.query(Solder).filter(Solder.StationID == station_put).scalar()
 
 
         if robot_act == 2 and station_get: # 取完成
@@ -73,11 +73,11 @@ def task_robot():
 
         elif robot_act == 5:  # 锡膏被人取走完成
             new_solderflowrecord = SolderFlowRecord(
-                SolderCode=solder_getting.SolderCode,
+                SolderCode=solder_putting.SolderCode,
                 DateTime=datetime.now(),
                 Type="出柜"
             )
-            db_session.delete(solder_getting)
+            db_session.delete(solder_putting)
             db_session.add(new_solderflowrecord)
 
 
