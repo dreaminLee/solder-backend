@@ -404,8 +404,7 @@ def move_update():
             # 每个区域的存在锡膏的点位
             solder_station_ids = {int(solder.StationID) for solder, _ in solder_data}
             # 获取当前时间并转换为本地时间（Asia/Shanghai）UTC格式
-            local_time = datetime.now()  # 假设这是本地时间，没有时区信息
-            local_time = pytz.UTC.localize(local_time)
+            local_time = datetime.now()
             #检查出库是否超时
             if start == 603 or start == 803:
                 for solder, model_data in solder_data:
@@ -415,7 +414,6 @@ def move_update():
                         # 出库时间超时检查（自动超时冷藏）
                         out_timeout_minutes = getattr(model_data, "OutChaoshiAutoLc", None)
                         ready_out_time = solder.ReadyOutDateTime
-                        ready_out_time = pytz.UTC.localize(ready_out_time)
                         if ready_out_time.tzinfo is None:
                             logger.warning("ready_out_time为空")
                         if ready_out_time is not None and out_timeout_minutes is not None:
@@ -504,8 +502,6 @@ def move_update():
                         continue
                     if model_data :
                         solder_storage_time = solder.StorageDateTime
-                        if solder_storage_time.tzinfo is None:
-                            solder_storage_time = pytz.UTC.localize(solder_storage_time)
                         timeout_field = "RewarmMaxTime"
                         check_field = "RewarmTime"
                         region_name = "回温区"
@@ -517,17 +513,8 @@ def move_update():
                             modbus_client.modbus_write("jcq", 5, int(solder.StationID), 1)
                             continue  # 超时后跳过后续操作
 
-                        # 状态变换判断
-                        time_delta = timedelta(
-                            minutes=getattr(model_data, check_field) if check_field == "RewarmTime" else 0
-                        )
-                        check_threshold = local_time - time_delta
-                        # 回温结束时间算出来之后，那就要填到solder表中对应的记录中去
-                        session.query(Solder).filter(Solder.SolderCode == solder.SolderCode).update({
-                            Solder.RewarmEndDateTime: check_threshold
-                        }, synchronize_session=False)
                         rule = session.query().with_entities(SolderModel.JiaobanRule).filter(SolderModel.Model == solder.Model).first().JiaobanRule
-                        if solder_storage_time <= check_threshold:
+                        if solder.RewarmEndDateTime <= local_time:
                             if rule == "自动搅拌":
                                 modbus_value = 2
                             else:
@@ -537,7 +524,7 @@ def move_update():
                         # modbus_value = 12 if solder_storage_time <= check_threshold else 10
                         session.commit()
                         logger.info(
-                            f"状态变换：{region_name} || 存储时间{solder_storage_time} || 回温结束时间{check_threshold} || 点位{int(solder.StationID)} || 写入值{modbus_value}"
+                            f"状态变换：{region_name} || 存储时间{solder_storage_time} || 回温结束时间{solder.RewarmEndDateTime} || 点位{int(solder.StationID)} || 写入值{modbus_value}"
                         )
                         current_modbus_status = modbus_client.modbus_read("jcq", int(solder.StationID), 1)[0]
                         if current_modbus_status != 22 and current_modbus_status != 21:
@@ -551,8 +538,6 @@ def move_update():
                         region_name = "待取区"
                         timeout_threshold = local_time - timedelta(minutes=getattr(model_data, timeout_field))
                         solder_storage_time = solder.StorageDateTime
-                        if solder_storage_time.tzinfo is None:
-                            solder_storage_time = pytz.UTC.localize(solder_storage_time)
 
                         if solder_storage_time <= timeout_threshold:
                             logger.info(

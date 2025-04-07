@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from modbus.client import modbus_client
 from modbus.modbus_addresses import ADDR_ROBOT_STATUS, ADDR_ROBOT_CONFIRM
@@ -29,6 +29,9 @@ def task_robot():
         logger.info(f"放库位号: {region_addr_to_region_name(station_put)}{station_put} 状态{station_put_status}")
         solder_getting = db_session.query(Solder).filter(Solder.StationID == station_get).scalar()
         solder_putting = db_session.query(Solder).filter(Solder.StationID == station_put).scalar()
+        solder_model_getting = db_session.query (SolderModel
+                                        ).filter(SolderModel.Model == (solder_getting.Model if solder_getting else None)
+                                        ).scalar()
 
 
         if robot_act == 2 and station_get: # 取完成
@@ -37,9 +40,6 @@ def task_robot():
                 solder_getting.ReadyOutDateTime = datetime.now()
 
             elif ADDR_REGION_REWARM_START <= station_get and station_get <= ADDR_REGION_REWARM_END:
-                solder_model_getting = db_session.query(SolderModel
-                                            ).filter(SolderModel.Model == solder_getting.Model
-                                            ).scalar()
                 if solder_model_getting:
                     modbus_client.write_float(solder_model_getting.StirSpeed, 1522)
                     modbus_client.write_float(solder_model_getting.StirTime,  1526)
@@ -54,6 +54,7 @@ def task_robot():
             solder_getting.StationID = station_put
 
             if ADDR_REGION_COLD_START <= station_put and station_put <= ADDR_REGION_COLD_END:
+                solder_getting.StorageDateTime = datetime.now()
                 new_solderflowrecord = SolderFlowRecord(
                     SolderCode=solder_getting.SolderCode,
                     DateTime=datetime.now(),
@@ -62,7 +63,9 @@ def task_robot():
                 db_session.add(new_solderflowrecord)
 
             elif ADDR_REGION_REWARM_START <= station_put and station_put <= ADDR_REGION_REWARM_END:
-                solder_getting.RewarmStartDateTime = datetime.now()
+                now_date_time = datetime.now()
+                solder_getting.RewarmStartDateTime = now_date_time
+                solder_getting.RewarmEndDateTime = now_date_time + timedelta(minutes=solder_model_getting.RewarmTime)
                 new_solderflowrecord = SolderFlowRecord(
                     SolderCode=solder_getting.SolderCode,
                     DateTime=datetime.now(),
