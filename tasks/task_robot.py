@@ -23,12 +23,12 @@ def task_robot():
 
     station_get = StaType_station_dict.get(f"移动模组[{robot_get}]")
     station_put = StaType_station_dict.get(f"移动模组[{robot_put}]")
-    station_get_status = modbus_client.modbus_read("jcq", station_get, 1)[0]
-    station_put_status = modbus_client.modbus_read("jcq", station_put, 1)[0]
+    station_get_status = modbus_client.modbus_read("jcq", station_get, 1)[0] if station_get else 0
+    station_put_status = modbus_client.modbus_read("jcq", station_put, 1)[0] if station_put else 0
     logger.info(f"机械臂状态: {robot_act}")
     logger.info(f"取库位号: {region_addr_to_region_name(station_get)}{station_get} 状态{station_get_status}")
     logger.info(f"放库位号: {region_addr_to_region_name(station_put)}{station_put} 状态{station_put_status}")
-    solder_getting = next((solder for solder in solders if solder.StationID == station_get))
+    solder_getting = next((solder for solder in solders if solder.StationID == station_get), None)
 
 
     if robot_act == 2 and station_get: # 取完成
