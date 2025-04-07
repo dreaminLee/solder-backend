@@ -658,9 +658,9 @@ def run_scheduler():
 
 def infinite_loop(func, interval=1):
     while True:
+        sleep(interval)
         try:
             func()
-            sleep(interval)
         except Exception as exc:
             logger.error(traceback.format_exc())
 
