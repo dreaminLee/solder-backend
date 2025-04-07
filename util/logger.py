@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+import logging.handlers
 
 # 创建日志记录器
 logger = logging.getLogger(__name__)
@@ -21,3 +22,4 @@ logger.addHandler(file_handler)
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
+logger.propagate = False

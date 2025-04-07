@@ -4,6 +4,7 @@ from modbus.modbus_addresses import ADDR_SCANNER_STATUS, ADDR_SCANNER_CONFIRM
 from modbus.scan import scan
 from util.parse import parse_barcode
 from util.db_connection import db_instance
+from util.logger import logger
 from models import User, Solder, SolderFlowRecord
 
 
@@ -12,6 +13,7 @@ def task_scan():
 
         scanner_req = modbus_client.modbus_read("jcq", ADDR_SCANNER_STATUS.REQ, 1)[0]
         scanner_pos = modbus_client.modbus_read("jcq", ADDR_SCANNER_STATUS.POS, 1)[0]
+        logger.info(f"扫码状态：请求 {scanner_req}, 库位号 {scanner_pos}")
 
         if not scanner_req:
             modbus_client.modbus_write("jcq", 0, ADDR_SCANNER_CONFIRM.RET, 1)
@@ -19,6 +21,7 @@ def task_scan():
             return
 
         barcode_scanned = scan()
+        logger.info(f"扫到条码: {barcode_scanned}")
         open("res_asc.txt", "w", encoding="utf8").write(barcode_scanned)
         parse_result = parse_barcode(barcode_scanned)
         if not parse_result:
