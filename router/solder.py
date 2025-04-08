@@ -6,6 +6,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from modbus.client import modbus_client
 from modbus.modbus_addresses import ADDR_REGION_COLD_START, ADDR_REGION_COLD_END
+from modbus.modbus_addresses import in_region_rewarm, in_region_wait
 from tasks.scheduler import file_path
 from util.MES_request import send_take_log
 from util.db_connection import db_instance
@@ -705,83 +706,65 @@ def out_solder():
     model_type = data.get('model_type')
     amount = data.get('amount')  # 新增参数，查询需要处理的数量
     solder_code = data.get("solder_code")
-    if solder_code and solder_code != "":
-        session = db_instance.get_session()
-        # 查询 Station 表中 StaArea 为 "待取区" 的一个记录
-        station = session.query(Station).filter(Station.StaArea == "待取区").first()
-        if station:
-            # 如果查到记录，获取该 Station 的 StationID
-            new_station_id = station.StationID
-            # 更新 Solder 表中 solder_code 等于给定 id 的记录
-            solder = session.query(Solder).filter(Solder.SolderCode == solder_code).first()
-
-            if solder:
-                # 更新记录的 StationID
-                solder.StationID = new_station_id
-                session.commit()  # 提交事务
-                session.close()
-                return Response.SUCCESS("Solder record updated successfully.")
-            else:
-                return Response.SUCCESS("Solder record not found for the provided id.")
-        else:
-            return Response.SUCCESS("No Station found with StaArea == '回温区'.")
 
     if not amount or amount <= 0:
         return Response.FAIL("请提供有效的数量参数")
 
-    # 获取数据库会话
-    session = db_instance.get_session()
+    with db_instance.get_session() as session:
 
-    # 获取用户信息，根据 user_id 查询 UserName
-    user = session.query(User).filter(User.UserID == user_id).first()
-    if not user:
-        return jsonify(Response.FAIL("用户不存在"))
+        user = session.query(User).filter(User.UserID == user_id).first()
+        if not user:
+            return jsonify(Response.FAIL("用户不存在"))
 
-    user_name = user.UserName  # 获取用户名
+        user_name = user.UserName
 
-    results = session.query(Solder, Station.StationID).join(
-        Station, Solder.StationID == Station.StationID
-    ).filter(
-        or_(Station.StaArea == "待取区", Station.StaArea == "回温区")
-    ).all()
+        solders_in_rewarm_wait = session.query(Solder.SolderCode, Solder.StationID).filter(
+            Solder.Model == model_type,
+            or_(in_region_rewarm(Solder.StationID), in_region_wait(Solder.StationID))
+        ).all()
 
-    # 将查询结果转化为字典并根据条件过滤
-    solder_records = [
-        {
-            "SolderCode": solder.SolderCode,
-            "StationID": station_id
-        }
-        for solder, station_id in results
-        if (modbus_client.modbus_read('jcq', station_id, 1)[0] == 0 or modbus_client.modbus_read("jcq", station_id, 1)[0] == 21) and solder.Model==model_type
-    ]
+        solders_outable = [
+            {
+                "SolderCode": solder_code,
+                "StationID": station_id,
+                "Station_status": modbus_client.modbus_read("jcq", station_id, 1)[0]
+            }
+            for solder_code, station_id in solders_in_rewarm_wait
+        ]
+        solders_outable = [
+            r for r in solders_outable if
+                any(in_region_rewarm(r["StationID"]) and     r["Station_status"] == 21,
+                    in_region_wait  (r['StationID']) and any(r["Station_status"] == 10,
+                                                             r["Station_status"] == 0))
+        ]
 
-    # 如果没有找到符合条件的锡膏记录
-    if len(solder_records) < amount:
-        return Response.FAIL(f"未找到足够的锡膏记录，当前只有 {len(solder_records)} 条")
+        # 如果没有找到符合条件的锡膏记录
+        if len(solders_outable) < amount:
+            return Response.FAIL(f"未找到足够的锡膏记录，当前只有 {len(solders_outable)} 条")
 
-    # 遍历找到的 solder 记录，逐条插入 SolderFlowRecord
-    for solder_record in solder_records[:amount]:  # 只处理前 amount 条记录
-        solder_flow_record = SolderFlowRecord(
-            UserID=user_id,
-            UserName=user_name,
-            SolderCode=solder_record['SolderCode'],
-            Type="请求出柜",  # 假设类型为 "出柜"，可以根据实际需求调整
-            DateTime=datetime.now()
-        )
+        # 遍历找到的 solder 记录，逐条插入 SolderFlowRecord
+        for solder_record in solders_outable[:amount]:  # 只处理前 amount 条记录
+            solder_flow_record = SolderFlowRecord(
+                UserID=user_id,
+                UserName=user_name,
+                SolderCode=solder_record['SolderCode'],
+                Type="请求出柜",  # 假设类型为 "出柜"，可以根据实际需求调整
+                DateTime=datetime.now()
+            )
 
-        # 插入到 SolderFlowRecord 表
-        session.add(solder_flow_record)
-        rule = session.query().with_entities(SolderModel.JiaobanRule).filter(SolderModel.Model == model_type).first().JiaobanRule
-        modbus_client.modbus_write('jcq',2 if rule == "自动搅拌" else 22,solder_record["StationID"],1)
-        # # 更新记录的 StationID 为 "待取区" 的工位ID
-        # solder_record.StationID = station.StationID  # 修改 StationID 为待取区的工位ID
+            # 插入到 SolderFlowRecord 表
+            session.add(solder_flow_record)
+            rule = session.query().with_entities(SolderModel.JiaobanRule).filter(SolderModel.Model == model_type).first().JiaobanRule
+            modbus_client.modbus_write('jcq', 2 if rule == "自动搅拌" else 22, solder_record["StationID"], 1)
+            # # 更新记录的 StationID 为 "待取区" 的工位ID
+            # solder_record.StationID = station.StationID  # 修改 StationID 为待取区的工位ID
 
-    # 提交事务
-    session.commit()
-    session.close()
-    send_take_log(rid=solder_code,user_login=user_id)
-    # 返回成功的响应
-    return Response.SUCCESS({"message": f"{amount} 条锡膏记录已出柜，操作成功"})
+        # 提交事务
+        session.commit()
+        session.close()
+        send_take_log(rid=solder_code,user_login=user_id)
+        # 返回成功的响应
+        return Response.SUCCESS({"message": f"{amount} 条锡膏记录已出柜，操作成功"})
 
 @solder_bp.route('/lengcang_solder', methods=['GET'])
 def lengcang_solder():
