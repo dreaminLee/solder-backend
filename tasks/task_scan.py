@@ -47,9 +47,9 @@ def task_scan():
 
         #查询此前该锡膏的入柜次数
         in_times=db_session.query(SolderFlowRecord
-                        ).join(Solder, Solder.SolderCode==SolderFlowRecord.SolderCode
-                        ).filter(SolderFlowRecord.Type=="请求入柜"
-                        ).count()
+                          ).filter(SolderFlowRecord.Type=="请求入柜",
+                                   SolderFlowRecord.SolderCode == barcode_scanned
+                          ).count()
         new_solder = Solder(
             SolderCode=barcode_scanned,
             Model=model,
