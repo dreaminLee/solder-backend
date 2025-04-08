@@ -1,10 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, request, jsonify
 
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from modbus.client import modbus_client
+from modbus.modbus_addresses import ADDR_REGION_COLD_START, ADDR_REGION_COLD_END
 from tasks.scheduler import file_path
 from util.MES_request import send_take_log
 from util.db_connection import db_instance
@@ -477,35 +478,18 @@ def delete_model():
 
 @solder_bp.route('/unordered_solder', methods=['GET'])
 def unordered_solder():
-    # 获取 SQLAlchemy 会话
-    session = db_instance.get_session()
-    try:
-        # 查询 OrderUser 为 None 且 StationID 在 201 到 539 之间的记录
-        solders = session.query(Solder).filter(
+    with db_instance.get_session() as db_session:
+        solders_unordered = db_session.query(Solder, SolderModel.MinLcTime
+                                     ).join(SolderModel, SolderModel.Model == Solder.Model
+                                     ).filter(
+            Solder.StationID.between(ADDR_REGION_COLD_START, ADDR_REGION_COLD_END),
             Solder.OrderUser == None,
-            Solder.StationID.between(201, 539)
         ).all()
-
-        # 进一步筛选 modbus_read 值等于 2 的记录
-        unordered_solder = []
-        for solder in solders:
-            result=modbus_client.modbus_read("jcq",solder.StationID,1)[0]
-            if result==2:
-                unordered_solder.append(solder)
-
-        if not unordered_solder:
-            return Response.SUCCESS("没有记录")
-
-    except Exception as e:
-        session.rollback()
-        return Response.FAIL(f"失败: {str(e)}")
-
-    finally:
-        session.close()
-    # 假设 unordered_solder 是一个包含多个 SolderModel 实例的列表
-    unordered_solder_dict = [solder.to_dict() for solder in unordered_solder]
-    # 返回包含字典的响应
-    return Response.SUCCESS(unordered_solder_dict)
+        return Response.SUCCESS([
+            solder.to_dict()
+            for solder, min_lc_time in solders_unordered
+                if datetime.now() >= solder.StorageDateTime + timedelta(hours=min_lc_time)
+        ])
 
 
 @solder_bp.route('/ordered_solder', methods=['GET'])
@@ -564,7 +548,7 @@ def order_solder():
         # 查询 OrderUser 为 None 的记录，限制返回最多 amount 条记录
         solders = session.query(Solder).filter(
             Solder.OrderUser == None,
-            Solder.StationID.between(201, 539),
+            Solder.StationID.between(ADDR_REGION_COLD_START, ADDR_REGION_COLD_END),
             Solder.Model == model
         ).order_by(desc(Solder.BackLCTimes)).limit(amount).all()
 
