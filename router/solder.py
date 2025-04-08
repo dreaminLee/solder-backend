@@ -527,62 +527,59 @@ def order_solder():
     if not user_id or not model or not amount or not order_datetime_str:
         return Response.FAIL("缺少用户ID、型号、数量或日期时间参数")
 
-    if order_datetime_str:
-        try:
-            # 使用 strptime 将字符串转换为 datetime 对象
-            order_datetime = datetime.strptime(order_datetime_str, '%Y-%m-%d %H:%M:%S')
 
-            # 检查日期是否早于当前时间
-            if order_datetime < datetime.now():
-                return Response.FAIL("日期时间早于当前时间，无法预约")
-
-            # 然后使用 strftime 格式化为所需格式
-            order_datetime_str = order_datetime.strftime('%Y-%m-%d %H:%M:%S')
-        except ValueError as e:
-            # 如果字符串格式不匹配，捕获异常
-            print(f"Invalid date format: {e}")
-            return Response.FAIL("日期时间格式无效")
-
-    session = db_instance.get_session()
     try:
-        # 查询 OrderUser 为 None 的记录，限制返回最多 amount 条记录
-        solders = session.query(Solder).filter(
-            Solder.OrderUser == None,
-            Solder.StationID.between(ADDR_REGION_COLD_START, ADDR_REGION_COLD_END),
-            Solder.Model == model
-        ).order_by(desc(Solder.BackLCTimes)).limit(amount).all()
+        # 使用 strptime 将字符串转换为 datetime 对象
+        order_datetime = datetime.strptime(order_datetime_str, '%Y-%m-%d %H:%M:%S')
 
-        # 进一步筛选 modbus_read 值等于 2 的记录
-        unordered_solder = []
-        for solder in solders:
-            result = modbus_client.modbus_read("jcq", solder.StationID, 1)[0]
-            if result == 2:
-                unordered_solder.append(solder)
+        # 检查日期是否早于当前时间
+        if order_datetime < datetime.now():
+            return Response.FAIL("日期时间早于当前时间，无法预约")
 
-        if len(unordered_solder) < amount:
-            return Response.FAIL(f"不足 {amount} 个，无法预约")
+        # 然后使用 strftime 格式化为所需格式
+        order_datetime_str = order_datetime.strftime('%Y-%m-%d %H:%M:%S')
+    except ValueError as e:
+        # 如果字符串格式不匹配，捕获异常
+        print(f"Invalid date format: {e}")
+        return Response.FAIL("日期时间格式无效")
 
-        # 将时间字符串转换为 datetime 对象
-        order_datetime = datetime.strptime(order_datetime_str, "%Y-%m-%d %H:%M:%S")
+    with db_instance.get_session() as session:
 
         # 查询 User 表，获取对应的 username
         user = session.query(User).filter(User.UserID == user_id).first()
         if not user:
             return Response.FAIL("用户不存在")
 
+        # 查询 OrderUser 为 None 的记录，限制返回最多 amount 条记录
+        solders_unordered = session.query(Solder, SolderModel.MinLcTime
+                                  ).join(SolderModel, SolderModel.Model == Solder.Model
+                                  ).filter(
+            Solder.StationID.between(ADDR_REGION_COLD_START, ADDR_REGION_COLD_END),
+            Solder.OrderUser == None,
+            Solder.Model == model
+        ).order_by(desc(Solder.BackLCTimes)).all()
+
+        solders_unordered = [
+            solder for solder, min_lc_time in solders_unordered
+                if datetime.now() >= solder.StorageDateTime + timedelta(hours=min_lc_time)
+        ]
+
+        if len(solders_unordered) < amount:
+            return Response.FAIL(f"不足 {amount} 个，无法预约")
+
+        # 将时间字符串转换为 datetime 对象
+        order_datetime = datetime.strptime(order_datetime_str, "%Y-%m-%d %H:%M:%S")
+
         username = user.UserName
 
         # 更新符合条件的 Solder 的 OrderDateTime 和 OrderUser 字段
-        for solder in unordered_solder:
+        for solder in solders_unordered[:amount]:
             solder.OrderDateTime = order_datetime
             solder.OrderUser = username
 
         session.commit()
         return Response.SUCCESS("型号更新成功")
 
-    except Exception as e:
-        session.rollback()
-        return Response.FAIL(f"更新型号失败: {str(e)}")
 
 """
     待取出的锡膏列表：待取区中状态为0的锡膏 + 回温区中状态为21的”出库搅拌“的锡膏
