@@ -582,7 +582,7 @@ def order_solder():
 
 
 """
-    待取出的锡膏列表：待取区中状态为0的锡膏 + 回温区中状态为21的”出库搅拌“的锡膏
+    待取出的锡膏列表：待取区中状态为0或10的锡膏 + 回温区中状态为21的”出库搅拌“的锡膏
 """
 @solder_bp.route('/daiqu_solder', methods=['GET'])
 def daiqu_solder():
@@ -591,7 +591,7 @@ def daiqu_solder():
     # 获取数据库会话
     session = db_instance.get_session()
 
-    # 查询 Solder 数据并同时获取 Station.Disabled 字段
+    # 查询 Solder 数据并同时获取 Station.StationID 字段
     results = session.query(Solder, Station.StationID).join(
         Station, Solder.StationID == Station.StationID
     ).filter(
@@ -604,10 +604,13 @@ def daiqu_solder():
             "Model": solder.Model,
             "StorageUser": solder.StorageUser,
             "StorageDateTime": solder.StorageDateTime.strftime("%Y-%m-%d %H:%M:%S") if solder.StorageDateTime else None,
-            'Station':solder.StationID
+            "Station":solder.StationID,
+            "Station_status": modbus_client.modbus_read("jcq", station_id, 1)[0]
         }
-        for solder, station_disabled in results
-        if modbus_client.modbus_read('jcq',station_disabled,1)[0] == 0
+        for solder, station_id in results
+    ]
+    records_ready_daiqu = [
+        r for r in records_ready_daiqu if r["Station_status"] == 0 or r["Station_status"] == 10
     ]
 
     # 查询回温区中的 搅拌规则=“出库搅拌” 的 Solder 数据
@@ -632,14 +635,14 @@ def daiqu_solder():
 
     session.close()
     records_daiqu = records_ready_daiqu + records_rewarm_daiqu
-    print(records_daiqu)
+    # print(records_daiqu)
     # 返回查询结果
     # return jsonify(Response.SUCCESS(records_daiqu))
     return Response.SUCCESS(records_daiqu)
 
 
 """
-    可取出的锡膏列表：待取区中状态为2的锡膏 / 回温区中状态为22的”出库搅拌“的锡膏
+    可取出的锡膏列表：待取区中状态为2或12的锡膏 / 回温区中状态为22的”出库搅拌“的锡膏
 """
 @solder_bp.route('/accessible_solder', methods=['GET'])
 def accessible_solder():
@@ -647,7 +650,7 @@ def accessible_solder():
     # 获取数据库会话
     session = db_instance.get_session()
 
-    # 查询 Solder 数据并同时获取 Station.Disabled 字段
+    # 查询 Solder 数据并同时获取 Station.StationID 字段
     results = session.query(Solder, Station.StationID).join(
         Station, Solder.StationID == Station.StationID
     ).filter(
@@ -660,10 +663,13 @@ def accessible_solder():
             "Model": solder.Model,
             "StorageUser": solder.StorageUser,
             "StorageDateTime": solder.StorageDateTime.strftime("%Y-%m-%d %H:%M:%S") if solder.StorageDateTime else None,
-            'Station': solder.StationID
+            "Station": solder.StationID,
+            "Station_status": modbus_client.modbus_read("jcq", station_id, 1)[0]
         }
-        for solder, station_disabled in results
-        if modbus_client.modbus_read('jcq', station_disabled, 1)[0] == 2
+        for solder, station_id in results
+    ]
+    records_ready_accessible = [
+        r for r in records_ready_accessible if r["Station_status"] == 2 or r["Station_status"] == 12
     ]
 
     # 查询回温区中的 搅拌规则=“出库搅拌” 的 Solder 数据
