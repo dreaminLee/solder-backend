@@ -40,6 +40,11 @@ def task_scan():
         user_name = db_session.query(User.UserName).where(User.UserID == user_id).scalar()
         user_name = user_name if user_name else "未知用户"
 
+        # 删除已扫码但未进入冷藏柜的锡膏
+        old_solder = db_session.query(Solder).filter(Solder.StationID == 190).scalar()
+        if old_solder:
+            db_session.delete(old_solder)
+
         #查询此前该锡膏的入柜次数
         in_times=db_session.query(SolderFlowRecord
                         ).join(Solder, Solder.SolderCode==SolderFlowRecord.SolderCode
