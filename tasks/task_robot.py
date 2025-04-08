@@ -55,6 +55,8 @@ def task_robot():
 
             if ADDR_REGION_COLD_START <= station_put and station_put <= ADDR_REGION_COLD_END:
                 solder_getting.StorageDateTime = datetime.now()
+                solder_getting.OrderUser = None
+                solder_getting.OrderDateTime = None
                 solder_getting.BackLCTimes += 1
                 new_solderflowrecord = SolderFlowRecord(
                     SolderCode=solder_getting.SolderCode,
