@@ -308,6 +308,10 @@ def get_auto():
     coil_status = modbus_client.modbus_read("xq", 570, 1)
     return Response.SUCCESS(coil_status[0])
 
+@sport_bp.route('/get_is_stiring', methods=['GET'])
+def get_is_stiring():
+    return Response.SUCCESS(modbus_client.modbus_read("xq", 741, 1, unit=1)[0])
+
 @sport_bp.route('/input_open', methods=['POST'])
 def input_open():
     data = request.get_json()
