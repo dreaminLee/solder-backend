@@ -52,7 +52,8 @@ def task_robot():
         elif robot_act == 4 and station_get and station_put: # 放完成
             modbus_client.modbus_write("jcq", 0, station_put, 1)
             modbus_client.modbus_write("jcq", 1, station_get, 1)
-            solder_getting.StationID = station_put
+            if solder_getting:
+                solder_getting.StationID = station_put
 
             if ADDR_REGION_COLD_START <= station_put and station_put <= ADDR_REGION_COLD_END:
                 solder_getting.StorageDateTime = datetime.now()
