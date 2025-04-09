@@ -157,20 +157,6 @@ class SolderModel(db.Model):
     IfBackAfterJiaoban = db.Column(db.Integer, default=None)  # 搅拌后是否回冰柜
     TwiceChaoshiJinzhiInBinggui = db.Column(db.Integer, default=None)  # 二次超时禁止入冰柜
     TwiceInKu = db.Column(db.String(255), default=None)  # 再次入库选项
-    # 新增字段
-    Separator = db.Column(db.String(10), default=None)  # 分隔符
-    ModelStart = db.Column(db.Integer, default=None)  # 型号起始位置
-    ModelSeparatorStart = db.Column(db.Integer, default=None)  # 型号起始分隔符位置
-    ModelLength = db.Column(db.Integer, default=None)  # 型号长度
-    ProductionDateStart = db.Column(db.Integer, default=None)  # 生产日期起始位置
-    ProductionDateSeparatorStart = db.Column(db.Integer, default=None)  # 生产日期起始分隔符位置
-    ProductionDateLength = db.Column(db.Integer, default=None)  # 生产日期长度
-    ShelfLifeStart = db.Column(db.Integer, default=None)  # 保质期起始位置
-    ShelfLifeSeparatorStart = db.Column(db.Integer, default=None)  # 保质期起始分隔符位置
-    ShelfLifeLength = db.Column(db.Integer, default=None)  # 保质期长度
-    ExpirationDateStart = db.Column(db.Integer, default=None)  # 过期日期起始位置
-    ExpirationDateSeparatorStart = db.Column(db.Integer, default=None)  # 过期日期起始分隔符位置
-    ExpirationDateLength = db.Column(db.Integer, default=None)  # 过期日期长度
     def to_dict(self):
         return {
             'model': self.Model,
@@ -194,65 +180,6 @@ class SolderModel(db.Model):
             'if_back_after_jiaoban': self.IfBackAfterJiaoban,
             'twice_chaoshi_jinzhi_in_binggui': self.TwiceChaoshiJinzhiInBinggui,
             'twice_in_ku': self.TwiceInKu,
-            # 新增字段
-            'separator': self.Separator,
-            'model_start': self.ModelStart,
-            'model_separator_start': self.ModelSeparatorStart,
-            'model_length': self.ModelLength,
-            'production_date_start': self.ProductionDateStart,
-            'production_date_separator_start': self.ProductionDateSeparatorStart,
-            'production_date_length': self.ProductionDateLength,
-            'shelf_life_start': self.ShelfLifeStart,
-            'shelf_life_separator_start': self.ShelfLifeSeparatorStart,
-            'shelf_life_length': self.ShelfLifeLength,
-            'expiration_date_start': self.ExpirationDateStart,
-            'expiration_date_separator_start': self.ExpirationDateSeparatorStart,
-            'expiration_date_length': self.ExpirationDateLength
-        }
-
-
-class Barcoderule(db.Model):
-    __tablename__ = 'barcoderule'
-
-    ID = db.Column(db.Integer, primary_key=True)
-    ModelStartLab = db.Column(db.Integer, default=None)
-    ModelEndLab = db.Column(db.Integer, default=None)
-    ModelStart = db.Column(db.Integer, default=None)
-    ModelLength = db.Column(db.Integer, default=None)
-    ShelfLifeStart = db.Column(db.Integer, default=None)
-    ShelfLifeLength = db.Column(db.Integer, default=None)
-    ShelfLifeStartLab = db.Column(db.Integer, default=None)
-    ShelfLifeEndLab = db.Column(db.Integer, default=None)
-    ProductTimeStart = db.Column(db.Integer, default=None)
-    ProductTimeLength = db.Column(db.Integer, default=None)
-    ExpTimeStart = db.Column(db.Integer, default=None)
-    ExpTimeLength = db.Column(db.Integer, default=None)
-    CodeStart = db.Column(db.Integer, default=None)
-    CodeLength = db.Column(db.Integer, default=None)
-    CodeStartLab = db.Column(db.Integer, default=None)
-    CodeEndLab = db.Column(db.Integer, default=None)
-    Length = db.Column(db.Integer, default=None)
-
-    def to_dict(self):
-        return {
-            'ID': self.ID,
-            'ModelStartLab': self.ModelStartLab,
-            'ModelEndLab': self.ModelEndLab,
-            'ModelStart': self.ModelStart,
-            'ModelLength': self.ModelLength,
-            'ShelfLifeStart': self.ShelfLifeStart,
-            'ShelfLifeLength': self.ShelfLifeLength,
-            'ShelfLifeStartLab': self.ShelfLifeStartLab,
-            'ShelfLifeEndLab': self.ShelfLifeEndLab,
-            'ProductTimeStart': self.ProductTimeStart,
-            'ProductTimeLength': self.ProductTimeLength,
-            'ExpTimeStart': self.ExpTimeStart,
-            'ExpTimeLength': self.ExpTimeLength,
-            'CodeStart': self.CodeStart,
-            'CodeLength': self.CodeLength,
-            'CodeStartLab': self.CodeStartLab,
-            'CodeEndLab': self.CodeEndLab,
-            "Length" : self.Length,
         }
 
 
