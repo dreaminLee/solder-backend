@@ -92,7 +92,9 @@ def task_update():
 
             # 待取区超时
             elif (in_region_wait(solder.StationID) and
-                 current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].OutChaoshiAutoLc) and
+                 current_time >= solder.ReadyOutDateTime + timedelta(
+                     hours=solder_models[solder.Model].OutChaoshiAutoLc,
+                     seconds=solder_models[solder.Model].StirTime) and
                  solder.BackLCTimes < solder_models[solder.Model].OutChaoshiAutoLcTimes and
                  solder_models[solder.Model].IfBackAfterJiaoban):
 
@@ -102,7 +104,9 @@ def task_update():
 
             # 待取区超时 and (回冷藏区次数超出限制 or 搅拌后不可回冷藏)
             elif (in_region_wait(solder.StationID) and
-                  current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].OutChaoshiAutoLc) and
+                  current_time >= solder.ReadyOutDateTime + timedelta(
+                      hours=solder_models[solder.Model].OutChaoshiAutoLc,
+                      seconds=solder_models[solder.Model].StirTime) and
                  (solder.BackLCTimes >= solder_models[solder.Model].OutChaoshiAutoLcTimes or
                   not solder_models[solder.Model].IfBackAfterJiaoban)):
 
