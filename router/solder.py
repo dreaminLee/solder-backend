@@ -660,7 +660,11 @@ def accessible_solder():
                     "Station_status": modbus_client.modbus_read("jcq", solder.StationID, 1)[0],
                 }
                 for solder in solders_in_rewarm_wait)
-            if res["Station_status"] == 2 or res["Station_status"] == 22
+            if (in_region_wait(res["Station"]) and
+                res["Station_status"] == 2)
+                or
+               (in_region_rewarm(res["Station"]) and
+                res["Station_status"] == 22)
         ])
 
 
