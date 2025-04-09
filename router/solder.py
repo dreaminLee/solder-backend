@@ -599,31 +599,30 @@ def order_solder():
 
 """
     待取出的锡膏列表
-    - 自动搅拌规则, 待取区中的锡膏
-    - 出库搅拌规则, 回温区中到达回温时间的锡膏或被预约的锡膏
+    - 自动搅拌规则, 待取区中状态为0的锡膏
+    - 出库搅拌规则, 回温区中到达回温时间状态为0的锡膏或被预约的锡膏
 """
 @solder_bp.route('/daiqu_solder', methods=['GET'])
 def daiqu_solder():
     with db_instance.get_session() as db_session:
-        solders_in_rewarm_wait_model = db_session.query(Solder).filter(
+        solders_in_rewarm_wait_model = db_session.query(Solder, SolderModel
+            ).join(SolderModel, SolderModel.Model == Solder.Model
+            ).filter(
             or_(
                 Solder.StationID.between(ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END),
                 Solder.StationID.between(ADDR_REGION_WAIT_START, ADDR_REGION_WAIT_END),
             )
-        ).join(SolderModel, SolderModel.Model == Solder.Model).all()
+        ).all()
         solders_outable = [
             solder for solder, solder_model in solders_in_rewarm_wait_model
-            if any([
-                all([
-                    solder_model.JiaobanRule == "自动搅拌",
-                    in_region_wait(solder.StationID),
-                ]),
-                all([
-                    solder_model.JiaobanRule == "出库搅拌",
-                    in_region_rewarm(solder.StationID),
-                    datetime.now() >= solder.RewarmEndDateTime or solder.OrderUser != None,
-                ]),
-            ])
+            if (solder_model.JiaobanRule == "自动搅拌" and
+                in_region_wait(solder.StationID) and
+                modbus_client.modbus_read("jcq", solder.StationID, 1)[0] == 0)
+                or
+               (solder_model.JiaobanRule == "出库搅拌" and
+                in_region_rewarm(solder.StationID) and
+                modbus_client.modbus_read("jcq", solder.StationID, 1)[0] == 0 and
+                (datetime.now() >= solder.RewarmEndDateTime or solder.OrderUser != None))
         ]
         return Response.SUCCESS([
             {
@@ -693,24 +692,21 @@ def out_solder():
 
         user_name = user.UserName
 
-        solders_model = db_session.query(Solder).filter(
-            Solder.Model == model_type
-        ).join(SolderModel, SolderModel.Model == Solder.Model).all()
+        solders_model = db_session.query(Solder, SolderModel
+            ).join(SolderModel, SolderModel.Model == Solder.Model
+            ).filter(Solder.Model == model_type).all()
 
         solders_outable = [
             (solder, solder_model.JiaobanRule)
             for solder, solder_model in solders_model
-            if any([
-                all([
-                    solder_model.JiaobanRule == "自动搅拌",
-                    in_region_wait(solder.StationID),
-                ]),
-                all([
-                    solder_model.JiaobanRule == "出库搅拌",
-                    in_region_rewarm(solder.StationID),
-                    datetime.now() >= solder.RewarmEndDateTime or solder.OrderUser != None,
-                ]),
-            ])
+            if (solder_model.JiaobanRule == "自动搅拌" and
+                in_region_wait(solder.StationID) and
+                modbus_client.modbus_read("jcq", solder.StationID, 1)[0] == 0)
+                or
+               (solder_model.JiaobanRule == "出库搅拌" and
+                in_region_rewarm(solder.StationID) and
+                modbus_client.modbus_read("jcq", solder.StationID, 1)[0] == 0 and
+                datetime.now() >= solder.RewarmEndDateTime or solder.OrderUser != None)
         ]
 
         if len(solders_outable) < amount:
