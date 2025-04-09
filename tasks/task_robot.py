@@ -5,6 +5,7 @@ from modbus.modbus_addresses import ADDR_ROBOT_STATUS, ADDR_ROBOT_CONFIRM
 from modbus.modbus_addresses import region_addr_to_region_name
 from modbus.modbus_addresses import ADDR_REGION_COLD_START, ADDR_REGION_COLD_END
 from modbus.modbus_addresses import ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END
+from modbus.modbus_addresses import ADDR_REGION_WAIT_START, ADDR_REGION_WAIT_END
 from util.logger import logger
 from models import SolderModel, SolderFlowRecord, Station, Solder
 from util.db_connection import db_instance
@@ -17,7 +18,7 @@ def task_robot():
         robot_act = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.ACT, 1)[0]
 
 
-        stations = db_session.query(Station).filter(Station.StationID.notin_([601, 602, 801, 802])).all()
+        stations = db_session.query(Station).all()
         StaType_station_dict = {station.StaType: station.StationID for station in stations} # 移动模组[id]: 点位地址
 
         station_get = StaType_station_dict.get(f"移动模组[{robot_get}]")
@@ -73,6 +74,14 @@ def task_robot():
                     SolderCode=solder_getting.SolderCode,
                     DateTime=datetime.now(),
                     Type="进回温区"
+                )
+                db_session.add(new_solderflowrecord)
+
+            elif ADDR_REGION_WAIT_START <= station_put and station_put <= ADDR_REGION_WAIT_END:
+                new_solderflowrecord = SolderFlowRecord(
+                    SolderCode=solder_getting.SolderCode,
+                    DateTime=datetime.now(),
+                    Type="进待取区"
                 )
                 db_session.add(new_solderflowrecord)
 
