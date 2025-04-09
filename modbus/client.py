@@ -4,6 +4,7 @@ import struct
 import time
 from pymodbus.client.sync import ModbusTcpClient
 import re
+from time import sleep
 
 from util.logger import logger
 from config.modbus_config import tcp_host, tcp_port
@@ -329,6 +330,7 @@ class ModbusClientSingleton:
 
         while nums_written < len(content):
             resp = self._client.write_registers(write_addr, content[nums_written:nums_written+bulk_len], unit=unit)
+            sleep(0.01)
             nums_written += bulk_len
             write_addr += bulk_len
 
