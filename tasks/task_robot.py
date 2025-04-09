@@ -36,22 +36,23 @@ def task_robot():
 
 
         if robot_act == 2 and station_get: # 取完成
-            if ADDR_REGION_COLD_END <= station_get and station_get <= ADDR_REGION_COLD_END: #从冷藏区取出，准备出库
+            if ADDR_REGION_COLD_START <= station_get and station_get <= ADDR_REGION_COLD_END: #从冷藏区取出，准备出库
                 #更新出库时间，用来回冷藏
                 solder_getting.ReadyOutDateTime = datetime.now()
+                logger.info(f"冷藏区 {station_get} 锡膏号 {solder_getting.SolderCode} 更新出冷藏区时间 {datetime.now()}")
 
             elif ADDR_REGION_REWARM_START <= station_get and station_get <= ADDR_REGION_REWARM_END:
                 if solder_model_getting:
                     modbus_client.write_float(solder_model_getting.StirSpeed, 1522)
                     modbus_client.write_float(solder_model_getting.StirTime,  1526)
-                    logger.info(f"{solder_getting.SolderCode}在搅拌区设置搅拌参数成功 时间{solder_model_getting.StirSpeed}速度{solder_model_getting.StirTime}")
+                    logger.info(f"{solder_getting.SolderCode}在搅拌区设置搅拌参数成功 时间{solder_model_getting.StirTime}速度{solder_model_getting.StirSpeed}")
                 else:
                     logger.error(f"{solder_getting.SolderCode}在搅拌区设置搅拌参数出错 未找到solder_model_record")
 
 
         elif robot_act == 4 and station_get and station_put: # 放完成
             modbus_client.modbus_write("jcq", 0, station_put, 1)
-            modbus_client.modbus_write("jcq", 1, station_get, 1)
+            modbus_client.modbus_write("jcq", 0, station_get, 1)
             if solder_getting:
                 solder_getting.StationID = station_put
 

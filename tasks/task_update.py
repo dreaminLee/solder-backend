@@ -40,18 +40,13 @@ def task_update():
         solders_out_now: dict[str, Solder] = {
             solder_code: solder
             for solder_code, solder in solders.items()
-            if any([
-                all([
-                    in_region_rewarm(solder.StationID),
-                    # region_rewarm_now[solder.StationID] == 22,
-                    modbus_client.modbus_read("jcq", solder.StationID, 1)[0] == 22,
-                ]),
-                all([
-                    in_region_wait(solder.StationID),
-                    # region_wait_now[solder.StationID] == 2,
-                    modbus_client.modbus_read("jcq", solder.StationID, 1)[0] == 2,
-                ])
-            ])
+            if (in_region_rewarm(solder.StationID) and
+               #region_rewarm_now[solder.StationID] == 22 and
+                modbus_client.modbus_read("jcq", solder.StationID, 1)[0] == 22) or
+
+               (in_region_wait(solder.StationID) and
+               #region_wait_now[solder.StationID] == 2 and
+                modbus_client.modbus_read("jcq", solder.StationID, 1)[0] == 2)
         }
         # 正在取出锡膏的点位设置为对应状态
         for _, solder in solders_out_now.items():
@@ -60,7 +55,7 @@ def task_update():
             elif in_region_wait(solder.StationID):
                 region_wait[solder.StationID] = 2
 
-        solders = {k: v for k, v in solders if k not in solders_out_now}
+        solders = {k: v for k, v in solders.items() if k not in solders_out_now}
 
         # 已有锡膏的点位设置0
         for _, solder in solders.items():
@@ -78,45 +73,39 @@ def task_update():
             is_abnormal = False
 
             # 回温区超时
-            if all([
-                in_region_rewarm(solder.StationID),
-                current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].OutChaoshiAutoLc),
-                solder.BackLCTimes < solder_models[solder.Model].OutChaoshiAutoLcTimes,
-            ]):
+            if (in_region_rewarm(solder.StationID) and
+                current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].OutChaoshiAutoLc) and
+                solder.BackLCTimes < solder_models[solder.Model].OutChaoshiAutoLcTimes):
+
                 region_rewarm[solder.StationID] = 5
                 logger.info(f"回温区 {solder.StationID} 锡膏码 {solder.SolderCode} 异常，回冷藏区")
                 is_abnormal = True
 
             # 回温区超时 and 回冷藏区次数超出限制
-            elif all([
-                in_region_rewarm(solder.StationID),
-                current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].OutChaoshiAutoLc),
-                solder.BackLCTimes >= solder_models[solder.Model].OutChaoshiAutoLcTimes,
-            ]):
+            elif (in_region_rewarm(solder.StationID) and
+                  current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].OutChaoshiAutoLc) and
+                  solder.BackLCTimes >= solder_models[solder.Model].OutChaoshiAutoLcTimes):
+
                 region_rewarm[solder.StationID] = 6
                 logger.info(f"回温区 {solder.StationID} 锡膏码 {solder.SolderCode} 异常，无法回冷藏区")
                 is_abnormal = True
 
             # 待取区超时
-            elif all([
-                in_region_wait(solder.StationID),
-                current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].OutChaoshiAutoLc),
-                solder.BackLCTimes < solder_models[solder.Model].OutChaoshiAutoLcTimes,
-                solder_models[solder.Model].IfBackAfterJiaoban,
-            ]):
+            elif (in_region_wait(solder.StationID) and
+                 current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].OutChaoshiAutoLc) and
+                 solder.BackLCTimes < solder_models[solder.Model].OutChaoshiAutoLcTimes and
+                 solder_models[solder.Model].IfBackAfterJiaoban):
+
                 region_wait[solder.StationID] = 5
                 logger.info(f"待取区 {solder.StationID} 锡膏码 {solder.SolderCode} 异常，回冷藏区")
                 is_abnormal = True
 
             # 待取区超时 and (回冷藏区次数超出限制 or 搅拌后不可回冷藏)
-            elif all([
-                in_region_wait(solder.StationID),
-                current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].OutChaoshiAutoLc),
-                any([
-                    solder.BackLCTimes >= solder_models[solder.Model].OutChaoshiAutoLcTimes,
-                    not solder_models[solder.Model].IfBackAfterJiaoban,
-                ]),
-            ]):
+            elif (in_region_wait(solder.StationID) and
+                  current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].OutChaoshiAutoLc) and
+                 (solder.BackLCTimes >= solder_models[solder.Model].OutChaoshiAutoLcTimes or
+                  not solder_models[solder.Model].IfBackAfterJiaoban)):
+
                 region_wait[solder.StationID] = 6
                 logger.info(f"待取区 {solder.StationID} 锡膏码 {solder.SolderCode} 异常，无法回冷藏区")
                 is_abnormal = True
@@ -132,19 +121,17 @@ def task_update():
         num_solders_ordered_move_to_wait = 0
 
         for solder_code, solder in solders_ordered.items():
-            if all([
-                in_region_cold(solder.StationID),
-                current_time >= solder.OrderDateTime - timedelta(minutes=solder_models[solder.Model].RewarmTime + 10),
-            ]):
+            if in_region_cold(solder.StationID) and \
+               current_time >= solder.OrderDateTime - timedelta(minutes=solder_models[solder.Model].RewarmTime + 10):
+
                 region_cold[solder.StationID] = 2
                 num_solders_ordered_move_to_rewarm += 1
                 logger.info(f"冷藏区 {solder.StationID} 预约锡膏码 {solder.SolderCode} 移动到回温区")
 
-            elif all([
-                in_region_rewarm(solder.StationID),
-                current_time >= solder.OrderDateTime - timedelta(minutes=10),
-                solder_models[solder.Model].JiaobanRule == "自动搅拌", # 仅自动搅拌规则的锡膏需要移动到待取区
-            ]):
+            elif in_region_rewarm(solder.StationID) and \
+                 current_time >= solder.OrderDateTime - timedelta(minutes=10) and \
+                 solder_models[solder.Model].JiaobanRule == "自动搅拌": # 仅自动搅拌规则的锡膏需要移动到待取区
+
                 region_rewarm[solder.StationID] = 2
                 num_solders_ordered_move_to_wait += 1
                 logger.info(f"回温区 {solder.StationID} 预约锡膏码{solder.SolderCode} 移动到待取区")
@@ -167,23 +154,19 @@ def task_update():
 
         solders_in_wait_by_model_auto_stir = {
             model_name: [
-                solder for _, solder in solders.items() if 
-                    all([
-                        model_name == solder.Model,
-                        in_region_wait(solder.StationID),
-                    ])
+                solder for _, solder in solders.items()
+                if (model_name == solder.Model and
+                    in_region_wait(solder.StationID))
             ]
             for model_name, _ in solder_models_auto_stir.items()
         }
 
         solders_movable_from_rewarm_by_model_auto_stir = {
             model_name: [
-                solder for _, solder in solders.items() if
-                    all([
-                        model_name == solder.Model,
-                        in_region_rewarm(solder.StationID),
-                        current_time >= solder.RewarmEndDateTime,
-                    ])
+                solder for _, solder in solders.items()
+                if (model_name == solder.Model and
+                    in_region_rewarm(solder.StationID) and
+                    current_time >= solder.RewarmEndDateTime)
             ]
             for model_name, _ in solder_models_auto_stir.items()
         }
@@ -221,24 +204,20 @@ def task_update():
         # 将移动到回温区的锡膏数量 = min(需要移动到回温区的锡膏数量, 冷藏区已经到冷藏时间且未被预约的锡膏数量)
         solders_in_rewarm_by_model = {
             model_name: [
-                solder for _, solder in solders.items() if 
-                    all([
-                        model_name == solder.Model,
-                        in_region_rewarm(solder.StationID),
-                        region_rewarm[solder.StationID] == 0, # 保留停留在回温区的锡膏
-                    ])
+                solder for _, solder in solders.items()
+                if (model_name == solder.Model and
+                    in_region_rewarm(solder.StationID) and
+                    region_rewarm[solder.StationID] == 0) # 保留停留在回温区的锡膏
             ]
             for model_name, _ in solder_models.items()
         }
 
         solders_movable_from_cold_by_model = {
             model_name: [
-                solder for _, solder in solders.items() if
-                    all([
-                        model_name == solder.Model,
-                        in_region_cold(solder.StationID),
-                        current_time >= solder.StorageDateTime + timedelta(hours=solder_models[model_name].MinLcTime),
-                    ])
+                solder for _, solder in solders.items()
+                if (model_name == solder.Model and
+                    in_region_cold(solder.StationID) and
+                    current_time >= solder.StorageDateTime + timedelta(hours=solder_models[model_name].MinLcTime))
             ]
             for model_name, _ in solder_models.items()
         }
@@ -253,7 +232,7 @@ def task_update():
 
         for model_name, solders_movable in solders_movable_from_cold_by_model.items():
             num_solders_move = num_solders_put_to_rewarm_by_model[model_name]
-            logger.info(f"型号 {model_name} 有 {num_solders_move} 个锡膏将从回温区移动到待取区")
+            logger.info(f"型号 {model_name} 有 {num_solders_move} 个锡膏将从冷藏区移动到回温区")
             for solder_movable in solders_movable:
                 if num_solders_move == 0:
                     break
@@ -264,7 +243,7 @@ def task_update():
         num_make_region_rewarm_puttable = sum([v for _, v in num_solders_put_to_rewarm_by_model.items()])
         logger.info(f"需要移动到回温区的非预约锡膏数量: {num_make_region_rewarm_puttable}")
         num_make_region_rewarm_puttable += num_solders_ordered_move_to_rewarm
-        logger.info(f"需要移动到待取区的总锡膏数量: {num_make_region_rewarm_puttable}")
+        logger.info(f"需要移动到回温区的总锡膏数量: {num_make_region_rewarm_puttable}")
         for addr, status in region_rewarm.items():
             if status == -1:
                 region_rewarm[addr] = 1 if num_make_region_rewarm_puttable > 0 else 0
