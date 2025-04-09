@@ -74,7 +74,7 @@ def task_update():
 
             # 回温区超时
             if (in_region_rewarm(solder.StationID) and
-                current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].OutChaoshiAutoLc) and
+                current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].RewarmMaxTime) and
                 solder.BackLCTimes < solder_models[solder.Model].OutChaoshiAutoLcTimes):
 
                 region_rewarm[solder.StationID] = 5
@@ -83,7 +83,7 @@ def task_update():
 
             # 回温区超时 and 回冷藏区次数超出限制
             elif (in_region_rewarm(solder.StationID) and
-                  current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].OutChaoshiAutoLc) and
+                  current_time >= solder.ReadyOutDateTime + timedelta(minutes=solder_models[solder.Model].RewarmMaxTime) and
                   solder.BackLCTimes >= solder_models[solder.Model].OutChaoshiAutoLcTimes):
 
                 region_rewarm[solder.StationID] = 6

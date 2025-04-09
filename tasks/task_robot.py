@@ -6,6 +6,7 @@ from modbus.modbus_addresses import region_addr_to_region_name
 from modbus.modbus_addresses import ADDR_REGION_COLD_START, ADDR_REGION_COLD_END
 from modbus.modbus_addresses import ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END
 from modbus.modbus_addresses import ADDR_REGION_WAIT_START, ADDR_REGION_WAIT_END
+from modbus.modbus_addresses import in_region_cold, in_region_rewarm, in_region_wait
 from util.logger import logger
 from models import SolderModel, SolderFlowRecord, Station, Solder
 from util.db_connection import db_instance
@@ -36,12 +37,12 @@ def task_robot():
 
 
         if robot_act == 2 and station_get: # 取完成
-            if ADDR_REGION_COLD_START <= station_get and station_get <= ADDR_REGION_COLD_END: #从冷藏区取出，准备出库
+            if in_region_cold(station_get): #从冷藏区取出，准备出库
                 #更新出库时间，用来回冷藏
                 solder_getting.ReadyOutDateTime = datetime.now()
                 logger.info(f"冷藏区 {station_get} 锡膏号 {solder_getting.SolderCode} 更新出冷藏区时间 {datetime.now()}")
 
-            elif ADDR_REGION_REWARM_START <= station_get and station_get <= ADDR_REGION_REWARM_END:
+            elif in_region_rewarm(station_get) and not in_region_cold(station_put):
                 if solder_model_getting:
                     modbus_client.write_float(solder_model_getting.StirSpeed, 1522)
                     modbus_client.write_float(solder_model_getting.StirTime,  1526)
