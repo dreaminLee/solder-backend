@@ -6,6 +6,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from modbus.client import modbus_client
 from modbus.modbus_addresses import ADDR_REGION_COLD_START, ADDR_REGION_COLD_END
+from modbus.modbus_addresses import ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END
+from modbus.modbus_addresses import ADDR_REGION_WAIT_START, ADDR_REGION_WAIT_END
 from modbus.modbus_addresses import in_region_rewarm, in_region_wait
 from tasks.scheduler import file_path
 from util.MES_request import send_take_log
@@ -477,6 +479,10 @@ def delete_model():
     finally:
         session.close()
 
+
+"""
+    未被预约的锡膏: 在冷藏区中 and OrderUser == None and 冷藏时间超过最小冷藏时间
+"""
 @solder_bp.route('/unordered_solder', methods=['GET'])
 def unordered_solder():
     with db_instance.get_session() as db_session:
@@ -493,6 +499,9 @@ def unordered_solder():
         ])
 
 
+"""
+    已被预约的锡膏: OrderUser != None
+"""
 @solder_bp.route('/ordered_solder', methods=['GET'])
 def ordered_solder():
     session = db_instance.get_session()
@@ -515,6 +524,11 @@ def ordered_solder():
     return Response.SUCCESS(ordered_solder_dict)
 
 
+"""
+    预约锡膏
+    可被预约的锡膏: 在冷藏区中 and OrderUser == None and 冷藏时间超过最小冷藏时间
+    预约功能无视回温时间限制
+"""
 @solder_bp.route('/order_solder', methods=['POST'])
 @jwt_required()
 def order_solder():
@@ -528,6 +542,7 @@ def order_solder():
     if not user_id or not model or not amount or not order_datetime_str:
         return Response.FAIL("缺少用户ID、型号、数量或日期时间参数")
 
+    amount = int(amount)
 
     try:
         # 使用 strptime 将字符串转换为 datetime 对象
@@ -557,7 +572,7 @@ def order_solder():
                                   ).filter(
             Solder.StationID.between(ADDR_REGION_COLD_START, ADDR_REGION_COLD_END),
             Solder.OrderUser == None,
-            Solder.Model == model
+            Solder.Model == model,
         ).order_by(desc(Solder.BackLCTimes)).all()
 
         solders_unordered = [
@@ -583,121 +598,78 @@ def order_solder():
 
 
 """
-    待取出的锡膏列表：待取区中状态为0或10的锡膏 + 回温区中状态为21的”出库搅拌“的锡膏
+    待取出的锡膏列表
+    - 自动搅拌规则, 待取区中的锡膏
+    - 出库搅拌规则, 回温区中到达回温时间的锡膏或被预约的锡膏
 """
 @solder_bp.route('/daiqu_solder', methods=['GET'])
 def daiqu_solder():
-    # data = request.get_json()
-    # type = data.get('type')
-    # 获取数据库会话
-    session = db_instance.get_session()
-
-    # 查询 Solder 数据并同时获取 Station.StationID 字段
-    results = session.query(Solder, Station.StationID).join(
-        Station, Solder.StationID == Station.StationID
-    ).filter(
-        (Station.StaArea == "待取区")
-    ).all()
-    # 将查询结果转化为字典并根据条件过滤
-    records_ready_daiqu = [
-        {
-            "SolderCode": solder.SolderCode,
-            "Model": solder.Model,
-            "StorageUser": solder.StorageUser,
-            "StorageDateTime": solder.StorageDateTime.strftime("%Y-%m-%d %H:%M:%S") if solder.StorageDateTime else None,
-            "Station":solder.StationID,
-            "Station_status": modbus_client.modbus_read("jcq", station_id, 1)[0]
-        }
-        for solder, station_id in results
-    ]
-    records_ready_daiqu = [
-        r for r in records_ready_daiqu if r["Station_status"] == 0 or r["Station_status"] == 10
-    ]
-
-    # 查询回温区中的 搅拌规则=“出库搅拌” 的 Solder 数据
-    rewarm_area_out_stir_solders = session.query(Solder).join(
-        SolderModel, Solder.Model == SolderModel.Model
-    ).filter(
-        (SolderModel.JiaobanRule == "出库搅拌"),
-        (Solder.StationID.between(601, 650)),
-    ).all()
-    # 将查询结果转化为字典并根据条件过滤
-    records_rewarm_daiqu = [
-        {
-            "SolderCode": solder.SolderCode,
-            "Model": solder.Model,
-            "StorageUser": solder.StorageUser,
-            "StorageDateTime": solder.StorageDateTime.strftime("%Y-%m-%d %H:%M:%S") if solder.StorageDateTime else None,
-            'Station': solder.StationID
-        }
-        for solder in rewarm_area_out_stir_solders
-        if modbus_client.modbus_read('jcq', solder.StationID , 1)[0] == 21
-    ]
-
-    session.close()
-    records_daiqu = records_ready_daiqu + records_rewarm_daiqu
-    # print(records_daiqu)
-    # 返回查询结果
-    # return jsonify(Response.SUCCESS(records_daiqu))
-    return Response.SUCCESS(records_daiqu)
+    with db_instance.get_session() as db_session:
+        solders_in_rewarm_wait_model = db_session.query(Solder).filter(
+            or_(
+                Solder.StationID.between(ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END),
+                Solder.StationID.between(ADDR_REGION_WAIT_START, ADDR_REGION_WAIT_END),
+            )
+        ).join(SolderModel, SolderModel.Model == Solder.Model).all()
+        solders_outable = [
+            solder for solder, solder_model in solders_in_rewarm_wait_model
+            if any([
+                all([
+                    solder_model.JiaobanRule == "自动搅拌",
+                    in_region_wait(solder.StationID),
+                ]),
+                all([
+                    solder_model.JiaobanRule == "出库搅拌",
+                    in_region_rewarm(solder.StationID),
+                    datetime.now() >= solder.RewarmEndDateTime or solder.OrderUser != None,
+                ]),
+            ])
+        ]
+        return Response.SUCCESS([
+            {
+                "SolderCode": solder.SolderCode,
+                "Model": solder.Model,
+                "StorageUser": solder.StorageUser,
+                "StorageDateTime": solder.StorageDateTime.strftime("%Y-%m-%d %H:%M:%S")
+                                if solder.StorageDateTime else None,
+                'Station': solder.StationID
+            }
+            for solder in solders_outable
+        ])
 
 
 """
-    可取出的锡膏列表：待取区中状态为2或12的锡膏 / 回温区中状态为22的”出库搅拌“的锡膏
+    可取出的锡膏列表：待取区中状态为2的锡膏 / 回温区中状态为22的”出库搅拌“的锡膏
 """
 @solder_bp.route('/accessible_solder', methods=['GET'])
 def accessible_solder():
-    # data = request.get_json()
-    # 获取数据库会话
-    session = db_instance.get_session()
+    with db_instance.get_session() as db_session:
+        solders_in_rewarm_wait = db_session.query(Solder).filter(
+            or_(
+                Solder.StationID.between(ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END),
+                Solder.StationID.between(ADDR_REGION_WAIT_START, ADDR_REGION_WAIT_END),
+            )
+        ).all()
+        return Response.SUCCESS([
+            res 
+            for res in ({
+                    "SolderCode": solder.SolderCode,
+                    "Model": solder.Model,
+                    "StorageUser": solder.StorageUser,
+                    "StorageDateTime": solder.StorageDateTime.strftime("%Y-%m-%d %H:%M:%S") if solder.StorageDateTime else None,
+                    "Station": solder.StationID,
+                    "Station_status": modbus_client.modbus_read("jcq", solder.StationID, 1)[0],
+                }
+                for solder in solders_in_rewarm_wait)
+            if res["Station_status"] == 2 or res["Station_status"] == 22
+        ])
 
-    # 查询 Solder 数据并同时获取 Station.StationID 字段
-    results = session.query(Solder, Station.StationID).join(
-        Station, Solder.StationID == Station.StationID
-    ).filter(
-        (Station.StaArea == "待取区")
-    ).all()
-    # 将查询结果转化为字典并根据条件过滤
-    records_ready_accessible = [
-        {
-            "SolderCode": solder.SolderCode,
-            "Model": solder.Model,
-            "StorageUser": solder.StorageUser,
-            "StorageDateTime": solder.StorageDateTime.strftime("%Y-%m-%d %H:%M:%S") if solder.StorageDateTime else None,
-            "Station": solder.StationID,
-            "Station_status": modbus_client.modbus_read("jcq", station_id, 1)[0]
-        }
-        for solder, station_id in results
-    ]
-    records_ready_accessible = [
-        r for r in records_ready_accessible if r["Station_status"] == 2 or r["Station_status"] == 12
-    ]
 
-    # 查询回温区中的 搅拌规则=“出库搅拌” 的 Solder 数据
-    rewarm_area_out_stir_solders = session.query(Solder).join(
-        SolderModel, Solder.Model == SolderModel.Model
-    ).filter(
-        (SolderModel.JiaobanRule == "出库搅拌"),
-        (Solder.StationID.between(601, 650)),
-    ).all()
-    # 将查询结果转化为字典并根据条件过滤
-    records_rewarm_accessible = [
-        {
-            "SolderCode": solder.SolderCode,
-            "Model": solder.Model,
-            "StorageUser": solder.StorageUser,
-            "StorageDateTime": solder.StorageDateTime.strftime("%Y-%m-%d %H:%M:%S") if solder.StorageDateTime else None,
-            'Station': solder.StationID
-        }
-        for solder in rewarm_area_out_stir_solders
-        if modbus_client.modbus_read('jcq', solder.StationID, 1)[0] == 22
-    ]
-
-    session.close()
-    records_accessible = records_ready_accessible + records_rewarm_accessible
-    # 返回查询结果
-    return jsonify(Response.SUCCESS(records_accessible))
-
+"""
+    锡膏出库接口
+        - 自动搅拌规则, 待取区中的锡膏
+        - 出库搅拌规则, 回温区中到达回温时间的锡膏或被预约的锡膏
+"""
 @solder_bp.route('/out_solder', methods=['POST'])
 @jwt_required()
 def out_solder():
@@ -709,62 +681,56 @@ def out_solder():
 
     if not amount or amount <= 0:
         return Response.FAIL("请提供有效的数量参数")
+    
+    if not model_type:
+        return Response.FAIL("请提供锡膏型号")
 
-    with db_instance.get_session() as session:
+    with db_instance.get_session() as db_session:
 
-        user = session.query(User).filter(User.UserID == user_id).first()
+        user = db_session.query(User).filter(User.UserID == user_id).first()
         if not user:
             return jsonify(Response.FAIL("用户不存在"))
 
         user_name = user.UserName
 
-        solders_in_rewarm_wait = session.query(Solder.SolderCode, Solder.StationID).filter(
-            Solder.Model == model_type,
-            or_(in_region_rewarm(Solder.StationID), in_region_wait(Solder.StationID))
-        ).all()
+        solders_model = db_session.query(Solder).filter(
+            Solder.Model == model_type
+        ).join(SolderModel, SolderModel.Model == Solder.Model).all()
 
         solders_outable = [
-            {
-                "SolderCode": solder_code,
-                "StationID": station_id,
-                "Station_status": modbus_client.modbus_read("jcq", station_id, 1)[0]
-            }
-            for solder_code, station_id in solders_in_rewarm_wait
-        ]
-        solders_outable = [
-            r for r in solders_outable if
-                any(in_region_rewarm(r["StationID"]) and     r["Station_status"] == 21,
-                    in_region_wait  (r['StationID']) and any(r["Station_status"] == 10,
-                                                             r["Station_status"] == 0))
+            (solder, solder_model.JiaobanRule)
+            for solder, solder_model in solders_model
+            if any([
+                all([
+                    solder_model.JiaobanRule == "自动搅拌",
+                    in_region_wait(solder.StationID),
+                ]),
+                all([
+                    solder_model.JiaobanRule == "出库搅拌",
+                    in_region_rewarm(solder.StationID),
+                    datetime.now() >= solder.RewarmEndDateTime or solder.OrderUser != None,
+                ]),
+            ])
         ]
 
-        # 如果没有找到符合条件的锡膏记录
         if len(solders_outable) < amount:
             return Response.FAIL(f"未找到足够的锡膏记录，当前只有 {len(solders_outable)} 条")
-
-        # 遍历找到的 solder 记录，逐条插入 SolderFlowRecord
-        for solder_record in solders_outable[:amount]:  # 只处理前 amount 条记录
+        
+        for solder, rule in solders_outable:
             solder_flow_record = SolderFlowRecord(
                 UserID=user_id,
                 UserName=user_name,
-                SolderCode=solder_record['SolderCode'],
+                SolderCode=solder.SolderCode,
                 Type="请求出柜",  # 假设类型为 "出柜"，可以根据实际需求调整
                 DateTime=datetime.now()
             )
 
-            # 插入到 SolderFlowRecord 表
-            session.add(solder_flow_record)
-            rule = session.query().with_entities(SolderModel.JiaobanRule).filter(SolderModel.Model == model_type).first().JiaobanRule
-            modbus_client.modbus_write('jcq', 2 if rule == "自动搅拌" else 22, solder_record["StationID"], 1)
-            # # 更新记录的 StationID 为 "待取区" 的工位ID
-            # solder_record.StationID = station.StationID  # 修改 StationID 为待取区的工位ID
-
-        # 提交事务
-        session.commit()
-        session.close()
-        send_take_log(rid=solder_code,user_login=user_id)
-        # 返回成功的响应
+            db_session.add(solder_flow_record)
+            modbus_client.modbus_write("jcq", 2 if rule == "自动搅拌" else 22, solder.StationID, 1)
+        
+        db_session.commit()
         return Response.SUCCESS({"message": f"{amount} 条锡膏记录已出柜，操作成功"})
+
 
 @solder_bp.route('/lengcang_solder', methods=['GET'])
 def lengcang_solder():
