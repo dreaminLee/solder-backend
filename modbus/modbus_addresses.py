@@ -1,5 +1,6 @@
 from enum import IntEnum, Enum
 import functools
+from config.modbus_config import region_settings
 
 class ADDR_ROBOT_STATUS(IntEnum):
     GET = 100
@@ -34,15 +35,15 @@ class REGION_TYPE(Enum):
 
 ADDR_STIRING_STATUS = 741
 
-ADDR_REGION_ENTER_START  = 901
-ADDR_REGION_ENTER_END    = 928
+ADDR_REGION_ENTER_START  = region_settings["addr_region_enter_start"]
+ADDR_REGION_ENTER_END    = region_settings["addr_region_enter_end"]
 ADDR_REGION_SCAN         = 190 # 仅作识别使用，禁止读写
-ADDR_REGION_COLD_START   = 201
-ADDR_REGION_COLD_END     = 580
-ADDR_REGION_REWARM_START = 601
-ADDR_REGION_REWARM_END   = 700
-ADDR_REGION_WAIT_START   = 801
-ADDR_REGION_WAIT_END     = 840
+ADDR_REGION_COLD_START   = region_settings["addr_region_cold_start"]
+ADDR_REGION_COLD_END     = region_settings["addr_region_cold_end"]
+ADDR_REGION_REWARM_START = region_settings["addr_region_rewarm_start"]
+ADDR_REGION_REWARM_END   = region_settings["addr_region_rewarm_end"]
+ADDR_REGION_WAIT_START   = region_settings["addr_region_wait_start"]
+ADDR_REGION_WAIT_END     = region_settings["addr_region_wait_end"]
 ADDR_REGION_FETCH_START  = 891
 ADDR_REGION_FETCH_END    = 892
 
