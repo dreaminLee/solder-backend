@@ -300,6 +300,38 @@ class ModbusClientSingleton:
         modbus_client.modbus_write('jcq', register0, int(add), 1)
         modbus_client.modbus_write('jcq',register1,int(add+1),1)
         return True
+
+    """
+        读一片连续的保持寄存器
+    """
+    def read_region(self, region_start, region_len, unit=0):
+        bulk_len = 100
+        read_addr = region_start
+        res = []
+
+        while region_len:
+            # print(f"{read_addr}: {bulk_len if bulk_len <= region_len else region_len}")
+            bulk = self._client.read_holding_registers(read_addr, bulk_len if bulk_len <= region_len else region_len, unit=unit).registers
+            res += bulk
+            # print(len(res))
+            region_len -= len(bulk)
+            read_addr += len(bulk)
+
+        return res
+
+    """
+        写一片连续的保持寄存器
+    """
+    def write_region(self, region_start, content, unit=0):
+        bulk_len = 100
+        write_addr = region_start
+        nums_written = 0
+
+        while nums_written < len(content):
+            resp = self._client.write_registers(write_addr, content[nums_written:nums_written+bulk_len], unit=unit)
+            nums_written += bulk_len
+            write_addr += bulk_len
+
 # 使用示例
 # if __name__ == "__main__":
 #     # 获取 Modbus 客户端单例（会自动连接设备）

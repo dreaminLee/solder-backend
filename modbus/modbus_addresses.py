@@ -1,4 +1,5 @@
 from enum import IntEnum, Enum
+import functools
 
 class ADDR_ROBOT_STATUS(IntEnum):
     GET = 100
@@ -61,3 +62,11 @@ def region_addr_to_region_name(addr):
         return "取料区"
     else:
         return "未知"
+
+
+def in_region(region_start, region_end, addr):
+    return region_start <= addr and addr <= region_end
+
+in_region_cold   = functools.partial(in_region, ADDR_REGION_COLD_START,   ADDR_REGION_COLD_END)
+in_region_rewarm = functools.partial(in_region, ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END)
+in_region_wait   = functools.partial(in_region, ADDR_REGION_WAIT_START,   ADDR_REGION_WAIT_END)

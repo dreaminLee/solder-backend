@@ -29,6 +29,7 @@ from .task_heartbeat import task_heartbeat
 from .task_freeze import task_freeze
 from .task_scan import task_scan
 from .task_robot import task_robot
+from .task_update import task_update
 
 # 设置 APScheduler 日志级别为 WARNING
 logging.getLogger('apscheduler').setLevel(logging.WARNING)
@@ -637,8 +638,7 @@ def run_scheduler():
         task_scan()
         task_robot()
         if not modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.ACT, 1)[0]:
-            move_update()
-            process_solders()
+            task_update()
 
 
 def infinite_loop(func, interval=1):
