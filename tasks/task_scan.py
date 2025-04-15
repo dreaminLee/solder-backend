@@ -8,26 +8,18 @@ from util.logger import logger
 from models import User, Solder, SolderFlowRecord, SolderFlowRecordEvent
 
 
-def task_scan():
+def task_scan_impl(scanner_req, scanner_pos):
     with db_instance.get_session() as db_session:
 
-        scanner_req = modbus_client.modbus_read("jcq", ADDR_SCANNER_STATUS.REQ, 1)[0]
-        scanner_pos = modbus_client.modbus_read("jcq", ADDR_SCANNER_STATUS.POS, 1)[0]
-        logger.info(f"扫码状态：请求 {scanner_req}, 库位号 {scanner_pos}")
-
         if not scanner_req:
-            modbus_client.modbus_write("jcq", 0, ADDR_SCANNER_CONFIRM.RET, 1)
-            modbus_client.modbus_write("jcq", 0, ADDR_SCANNER_CONFIRM.POS, 1)
-            return
+            return 0
 
         barcode_scanned = scan()
         logger.info(f"扫到条码: {barcode_scanned}")
         open("res_asc.txt", "w", encoding="utf8").write(barcode_scanned)
         parse_result = parse_barcode(barcode_scanned)
         if not parse_result:
-            modbus_client.modbus_write("jcq", 2,           ADDR_SCANNER_CONFIRM.RET, 1)
-            modbus_client.modbus_write("jcq", scanner_pos, ADDR_SCANNER_CONFIRM.POS, 1)
-            return
+            return 2
 
         model = parse_result['model']
         # productDate = parse_result['product_date']
@@ -73,5 +65,13 @@ def task_scan():
         db_session.add(new_solderflowrecord)
         db_session.commit()
 
-        modbus_client.modbus_write("jcq", 1,           ADDR_SCANNER_CONFIRM.RET, 1)
-        modbus_client.modbus_write("jcq", scanner_pos, ADDR_SCANNER_CONFIRM.POS, 1)
+        return 1
+
+
+def task_scan():
+    scanner_req = modbus_client.modbus_read("jcq", ADDR_SCANNER_STATUS.REQ, 1)[0]
+    scanner_pos = modbus_client.modbus_read("jcq", ADDR_SCANNER_STATUS.POS, 1)[0]
+    logger.info(f"扫码状态：请求 {scanner_req}, 库位号 {scanner_pos}")
+    scan_res = task_scan_impl(scanner_req, scanner_pos)
+    modbus_client.modbus_write("jcq", scan_res, ADDR_SCANNER_CONFIRM.RET, 1)
+    modbus_client.modbus_write("jcq", scanner_pos, ADDR_SCANNER_CONFIRM.POS, 1)
