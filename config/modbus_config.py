@@ -8,7 +8,7 @@ serial_bytesize = 8 # 5, 6, 7, 8
 serial_parity = 'N' # PARITY_NONE, PARITY_EVEN, PARITY_ODD, PARITY_MARK, PARITY_SPACE = 'N', 'E', 'O', 'M', 'S'
 serial_stopbits = 1 # STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO = (1, 1.5, 2)
 serial_timeout = 1
-region_settings = {
+region_setting = {
     "addr_region_enter_start": 901,
     "addr_region_enter_end": 928,
     "addr_region_cold_start": 201,
