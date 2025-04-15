@@ -1,11 +1,9 @@
 from datetime import datetime, timedelta
+from sqlalchemy import or_
 
 from modbus.client import modbus_client
 from modbus.modbus_addresses import ADDR_ROBOT_STATUS, ADDR_ROBOT_CONFIRM
 from modbus.modbus_addresses import region_addr_to_region_name
-from modbus.modbus_addresses import ADDR_REGION_COLD_START, ADDR_REGION_COLD_END
-from modbus.modbus_addresses import ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END
-from modbus.modbus_addresses import ADDR_REGION_WAIT_START, ADDR_REGION_WAIT_END
 from modbus.modbus_addresses import in_region_cold, in_region_rewarm, in_region_wait
 from util.logger import logger
 from models import SolderModel, SolderFlowRecord, Station, Solder
@@ -29,60 +27,65 @@ def task_robot():
         logger.info(f"机械臂状态: {robot_act}")
         logger.info(f"取库位号: {region_addr_to_region_name(station_get)}{station_get} 状态{station_get_status}")
         logger.info(f"放库位号: {region_addr_to_region_name(station_put)}{station_put} 状态{station_put_status}")
-        solder_getting = db_session.query(Solder).filter(Solder.StationID == station_get).scalar()
-        solder_putting = db_session.query(Solder).filter(Solder.StationID == station_put).scalar()
-        solder_model_getting = db_session.query (SolderModel
-                                        ).filter(SolderModel.Model == (solder_getting.Model if solder_getting else None)
-                                        ).scalar()
+        solder_moving = db_session.query(Solder
+                                 ).filter(or_(Solder.StationID == station_get, Solder.StationID == station_put)
+                                 ).scalar()
+        solder_moving_model = db_session.query (SolderModel
+                                        ).filter(SolderModel.Model == (solder_moving.Model)
+                                        ).scalar() if solder_moving else None
+        if not solder_moving:
+            modbus_client.modbus_write("jcq", robot_get, ADDR_ROBOT_CONFIRM.GET, 1)
+            modbus_client.modbus_write("jcq", robot_put, ADDR_ROBOT_CONFIRM.PUT, 1)
+            modbus_client.modbus_write("jcq", robot_act, ADDR_ROBOT_CONFIRM.ACT, 1)
+            return
 
 
         if robot_act == 2 and station_get: # 取完成
             if in_region_cold(station_get): #从冷藏区取出，准备出库
                 #更新出库时间，用来回冷藏
-                solder_getting.ReadyOutDateTime = datetime.now()
-                logger.info(f"冷藏区 {station_get} 锡膏号 {solder_getting.SolderCode} 更新出冷藏区时间 {datetime.now()}")
+                solder_moving.ReadyOutDateTime = datetime.now()
+                logger.info(f"冷藏区 {station_get} 锡膏号 {solder_moving.SolderCode} 更新出冷藏区时间 {datetime.now()}")
 
             elif in_region_rewarm(station_get) and not in_region_cold(station_put):
-                if solder_model_getting:
-                    modbus_client.write_float(solder_model_getting.StirSpeed, 1522)
-                    modbus_client.write_float(solder_model_getting.StirTime,  1526)
-                    logger.info(f"{solder_getting.SolderCode}在搅拌区设置搅拌参数成功 时间{solder_model_getting.StirTime}速度{solder_model_getting.StirSpeed}")
+                if solder_moving_model:
+                    modbus_client.write_float(solder_moving_model.StirSpeed, 1522)
+                    modbus_client.write_float(solder_moving_model.StirTime,  1526)
+                    logger.info(f"{solder_moving.SolderCode}在搅拌区设置搅拌参数成功 时间{solder_moving_model.StirTime}速度{solder_moving_model.StirSpeed}")
                 else:
-                    logger.error(f"{solder_getting.SolderCode}在搅拌区设置搅拌参数出错 未找到solder_model_record")
+                    logger.error(f"{solder_moving.SolderCode}在搅拌区设置搅拌参数出错 未找到solder_model_record")
 
 
         elif robot_act == 4 and station_get and station_put: # 放完成
             modbus_client.modbus_write("jcq", 0, station_put, 1)
             modbus_client.modbus_write("jcq", 0, station_get, 1)
-            if solder_getting:
-                solder_getting.StationID = station_put
+            solder_moving.StationID = station_put
 
-            if ADDR_REGION_COLD_START <= station_put and station_put <= ADDR_REGION_COLD_END:
-                solder_getting.StorageDateTime = datetime.now()
-                solder_getting.OrderUser = None
-                solder_getting.OrderDateTime = None
-                solder_getting.BackLCTimes += 1
+            if in_region_cold(station_put):
+                solder_moving.StorageDateTime = datetime.now()
+                solder_moving.OrderUser = None
+                solder_moving.OrderDateTime = None
+                solder_moving.BackLCTimes += 1
                 new_solderflowrecord = SolderFlowRecord(
-                    SolderCode=solder_getting.SolderCode,
+                    SolderCode=solder_moving.SolderCode,
                     DateTime=datetime.now(),
                     Type="进冷藏区"
                 )
                 db_session.add(new_solderflowrecord)
 
-            elif ADDR_REGION_REWARM_START <= station_put and station_put <= ADDR_REGION_REWARM_END:
+            elif in_region_rewarm(station_put):
                 now_date_time = datetime.now()
-                solder_getting.RewarmStartDateTime = now_date_time
-                solder_getting.RewarmEndDateTime = now_date_time + timedelta(minutes=solder_model_getting.RewarmTime)
+                solder_moving.RewarmStartDateTime = now_date_time
+                solder_moving.RewarmEndDateTime = now_date_time + timedelta(minutes=solder_moving_model.RewarmTime)
                 new_solderflowrecord = SolderFlowRecord(
-                    SolderCode=solder_getting.SolderCode,
+                    SolderCode=solder_moving.SolderCode,
                     DateTime=datetime.now(),
                     Type="进回温区"
                 )
                 db_session.add(new_solderflowrecord)
 
-            elif ADDR_REGION_WAIT_START <= station_put and station_put <= ADDR_REGION_WAIT_END:
+            elif in_region_wait(station_put):
                 new_solderflowrecord = SolderFlowRecord(
-                    SolderCode=solder_getting.SolderCode,
+                    SolderCode=solder_moving.SolderCode,
                     DateTime=datetime.now(),
                     Type="进待取区"
                 )
@@ -91,11 +94,11 @@ def task_robot():
 
         elif robot_act == 5:  # 锡膏被人取走完成
             new_solderflowrecord = SolderFlowRecord(
-                SolderCode=solder_putting.SolderCode,
+                SolderCode=solder_moving.SolderCode,
                 DateTime=datetime.now(),
                 Type="出柜"
             )
-            db_session.delete(solder_putting)
+            db_session.delete(solder_moving)
             db_session.add(new_solderflowrecord)
 
 
