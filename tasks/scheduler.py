@@ -15,6 +15,7 @@ from .task_freeze import task_freeze
 from .task_scan import task_scan
 from .task_robot import task_robot
 from .task_update import task_update
+from .task_monitor import task_monitor
 
 # 设置 APScheduler 日志级别为 WARNING
 logging.getLogger('apscheduler').setLevel(logging.WARNING)
@@ -64,6 +65,7 @@ def init_scheduler(app):
     scheduler.init_app(app)
     scheduler.add_job(id='task_heartbeat', func=task_heartbeat, trigger='interval', seconds=1)
     scheduler.add_job(id='run_scheduler', func=infinite_loop, args=(run_scheduler,), trigger='date', next_run_time=datetime.now())
+    scheduler.add_job(id='task_monitor', func=task_monitor, trigger='interval', seconds=0.5)
     if not scheduler.running:
         # 确保调度器正在运行，如果不是可以重启调度器或处理该情况
         scheduler.start()
