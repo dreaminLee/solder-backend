@@ -6,7 +6,7 @@ from modbus.modbus_addresses import ADDR_ROBOT_STATUS, ADDR_ROBOT_CONFIRM
 from modbus.modbus_addresses import region_addr_to_region_name
 from modbus.modbus_addresses import in_region_cold, in_region_rewarm, in_region_wait
 from util.logger import logger
-from models import SolderModel, SolderFlowRecord, Station, Solder
+from models import SolderModel, Station, Solder
 from util.db_connection import db_instance
 
 
@@ -59,41 +59,15 @@ def task_robot_impl(robot_get, robot_put, robot_act):
                 solder_moving.OrderUser = None
                 solder_moving.OrderDateTime = None
                 solder_moving.BackLCTimes += 1
-                new_solderflowrecord = SolderFlowRecord(
-                    SolderCode=solder_moving.SolderCode,
-                    DateTime=datetime.now(),
-                    Type="进冷藏区"
-                )
-                db_session.add(new_solderflowrecord)
 
             elif in_region_rewarm(station_put):
                 now_date_time = datetime.now()
                 solder_moving.RewarmStartDateTime = now_date_time
                 solder_moving.RewarmEndDateTime = now_date_time + timedelta(minutes=solder_moving_model.RewarmTime)
-                new_solderflowrecord = SolderFlowRecord(
-                    SolderCode=solder_moving.SolderCode,
-                    DateTime=datetime.now(),
-                    Type="进回温区"
-                )
-                db_session.add(new_solderflowrecord)
-
-            elif in_region_wait(station_put):
-                new_solderflowrecord = SolderFlowRecord(
-                    SolderCode=solder_moving.SolderCode,
-                    DateTime=datetime.now(),
-                    Type="进待取区"
-                )
-                db_session.add(new_solderflowrecord)
 
 
         elif robot_act == 5:  # 锡膏被人取走完成
-            new_solderflowrecord = SolderFlowRecord(
-                SolderCode=solder_moving.SolderCode,
-                DateTime=datetime.now(),
-                Type="出柜"
-            )
             db_session.delete(solder_moving)
-            db_session.add(new_solderflowrecord)
 
 
         db_session.commit()
