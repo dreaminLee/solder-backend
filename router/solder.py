@@ -13,7 +13,7 @@ from tasks.scheduler import file_path
 from util.MES_request import send_take_log
 from util.db_connection import db_instance
 from util.Response import Response
-from models import Solder, SolderModel, Station, SolderFlowRecord, User
+from models import Solder, SolderModel, Station, SolderFlowRecord, SolderFlowRecordEvent, User
 from util.parse import parse_barcode
 from sqlalchemy import desc, or_
 
@@ -721,7 +721,7 @@ def out_solder():
                 UserID=user_id,
                 UserName=user_name,
                 SolderCode=solder.SolderCode,
-                Type="请求出柜",  # 假设类型为 "出柜"，可以根据实际需求调整
+                Event=SolderFlowRecordEvent.REQUEST_OUT.value,
                 DateTime=datetime.now()
             )
 

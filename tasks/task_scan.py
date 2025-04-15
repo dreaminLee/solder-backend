@@ -5,7 +5,7 @@ from modbus.scan import scan
 from util.parse import parse_barcode
 from util.db_connection import db_instance
 from util.logger import logger
-from models import User, Solder, SolderFlowRecord
+from models import User, Solder, SolderFlowRecord, SolderFlowRecordEvent
 
 
 def task_scan():
@@ -47,7 +47,7 @@ def task_scan():
 
         #查询此前该锡膏的入柜次数
         in_times=db_session.query(SolderFlowRecord
-                          ).filter(SolderFlowRecord.Type=="请求入柜",
+                          ).filter(SolderFlowRecord.Event==SolderFlowRecordEvent.REQUEST_IN.value,
                                    SolderFlowRecord.SolderCode == barcode_scanned
                           ).count()
         new_solder = Solder(
@@ -67,7 +67,7 @@ def task_scan():
             UserID=user_id,
             UserName=user_name,
             DateTime=datetime.now(),
-            Type="请求入柜"
+            Event=SolderFlowRecordEvent.REQUEST_IN.value
         )
         db_session.add(new_solder)
         db_session.add(new_solderflowrecord)

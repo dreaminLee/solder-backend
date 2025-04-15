@@ -1,3 +1,5 @@
+from enum import Enum
+
 from extends import db
 
 # 建表视图
@@ -202,24 +204,45 @@ class TemperatureRecord(db.Model):
             'date_time': self.DateTime.strftime('%Y-%m-%d %H:%M:%S'),  # 格式化日期时间
         }
 
+
+class SolderFlowRecordEvent(Enum):
+    FROM_REGION_COLD   = "出冷藏区"
+    FROM_REGION_REWARM = "出回温区"
+    FROM_REGION_WAIT   = "出待取区"
+
+    TO_REGION_COLD   = "进冷藏区"
+    TO_REGION_REWARM = "进回温区"
+    TO_REGION_WAIT   = "进待取区"
+
+    START_STIR  = "开始搅拌"
+    FINISH_STIR = "结束搅拌"
+
+    SCAN_FAIL = "扫码失败"
+    REQUEST_IN  = "请求入库"
+    REQUEST_OUT = "请求出库"
+    REQUEST_IN_GOOD = "入库成功"
+    REQUEST_OUT_FINISH = "出库完成"
+
+
 class SolderFlowRecord(db.Model):
     __tablename__ = 'solderflowrecord'
     id = db.Column(db.Integer, primary_key=True,  autoincrement=True)
-    SolderCode = db.Column(db.String(100), nullable=False)  # 锡膏码
-    UserID = db.Column(db.String(100))  # 工号
-    UserName = db.Column(db.String(100))  # 姓名
-    Type = db.Column(db.String(100), nullable=False)  # 类型
-    DateTime = db.Column(db.DateTime, nullable=False)  # 日期时间
+    Event      = db.Column(db.String(100), nullable=False)  # 事件
+    DateTime   = db.Column(db.DateTime,    nullable=False)  # 日期时间
+    SolderCode = db.Column(db.String(100))  # 锡膏码
+    UserID     = db.Column(db.String(100))  # 用户ID
+    UserName   = db.Column(db.String(100))  # 用户名
 
     def to_dict(self):
         # 将 ORM 对象转换为字典，方便返回 JSON 格式
         return {
+            'event': self.Event,
+            'date_time': self.DateTime.strftime('%Y-%m-%d %H:%M:%S'),  # 格式化为字符串
             'solder_code': self.SolderCode,
             'user_id': self.UserID,
             'user_name': self.UserName,
-            'type': self.Type,
-            'date_time': self.DateTime.strftime('%Y-%m-%d %H:%M:%S'),  # 格式化为字符串
         }
+
 
 class Station(db.Model):
     __tablename__ = 'station'
