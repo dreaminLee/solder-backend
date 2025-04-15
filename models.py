@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, IntEnum
 
 from extends import db
 
@@ -69,6 +69,12 @@ class Order(db.Model):
             'datetime': self.DateTime.strftime('%Y-%m-%d %H:%M:%S')
         }
 
+
+class SolderStatus(IntEnum):
+    STATION  = 0
+    MOVING   = 1
+
+
 class Solder(db.Model):
     __tablename__ = 'solder'
 
@@ -101,6 +107,7 @@ class Solder(db.Model):
     WorkNum = db.Column(db.String(100))  # 工单号
     MesError = db.Column(db.String(200))  # 其它错误内容
     AgainColdDateTime = db.Column(db.DateTime)  # 再次冷藏时间
+    Status = db.Column(db.Integer) # 锡膏状态
 
     def to_dict(self):
         return {
