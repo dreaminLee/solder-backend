@@ -29,11 +29,12 @@ def task_robot_impl(robot_get, robot_put, robot_act):
         solder_moving_model = db_session.query (SolderModel
                                         ).filter(SolderModel.Model == (solder_moving.Model)
                                         ).scalar() if solder_moving else None
-        if not solder_moving:
+
+        if not station_get or not station_put or not solder_moving:
             return
 
 
-        if robot_act == 2 and station_get: # 取完成
+        if robot_act == 2: # 取完成
             if in_region_cold(station_get): #从冷藏区取出，准备出库
                 #更新出库时间，用来回冷藏
                 solder_moving.ReadyOutDateTime = datetime.now()
@@ -48,7 +49,7 @@ def task_robot_impl(robot_get, robot_put, robot_act):
                     logger.error(f"{solder_moving.SolderCode}在搅拌区设置搅拌参数出错 未找到solder_model_record")
 
 
-        elif robot_act == 4 and station_get and station_put: # 放完成
+        elif robot_act == 4: # 放完成
             modbus_client.modbus_write("jcq", 0, station_put, 1)
             modbus_client.modbus_write("jcq", 0, station_get, 1)
             solder_moving.StationID = station_put
