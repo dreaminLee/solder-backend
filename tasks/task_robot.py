@@ -10,12 +10,8 @@ from models import SolderModel, SolderFlowRecord, Station, Solder
 from util.db_connection import db_instance
 
 
-def task_robot():
+def task_robot_impl(robot_get, robot_put, robot_act):
     with db_instance.get_session() as db_session:
-        robot_get = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.GET, 1)[0]
-        robot_put = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.PUT, 1)[0]
-        robot_act = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.ACT, 1)[0]
-
 
         stations = db_session.query(Station).all()
         StaType_station_dict = {station.StaType: station.StationID for station in stations} # 移动模组[id]: 点位地址
@@ -24,7 +20,7 @@ def task_robot():
         station_put = StaType_station_dict.get(f"移动模组[{robot_put}]")
         station_get_status = modbus_client.modbus_read("jcq", station_get, 1)[0] if station_get else -1
         station_put_status = modbus_client.modbus_read("jcq", station_put, 1)[0] if station_put else -1
-        logger.info(f"机械臂状态: {robot_act}")
+        logger.info(f"机械臂状态 move_id_get:{robot_get} move_id_put:{robot_put} action:{robot_act}")
         logger.info(f"取库位号: {region_addr_to_region_name(station_get)}{station_get} 状态{station_get_status}")
         logger.info(f"放库位号: {region_addr_to_region_name(station_put)}{station_put} 状态{station_put_status}")
         solder_moving = db_session.query(Solder
@@ -34,9 +30,6 @@ def task_robot():
                                         ).filter(SolderModel.Model == (solder_moving.Model)
                                         ).scalar() if solder_moving else None
         if not solder_moving:
-            modbus_client.modbus_write("jcq", robot_get, ADDR_ROBOT_CONFIRM.GET, 1)
-            modbus_client.modbus_write("jcq", robot_put, ADDR_ROBOT_CONFIRM.PUT, 1)
-            modbus_client.modbus_write("jcq", robot_act, ADDR_ROBOT_CONFIRM.ACT, 1)
             return
 
 
@@ -107,3 +100,16 @@ def task_robot():
         modbus_client.modbus_write("jcq", robot_get, ADDR_ROBOT_CONFIRM.GET, 1)
         modbus_client.modbus_write("jcq", robot_put, ADDR_ROBOT_CONFIRM.PUT, 1)
         modbus_client.modbus_write("jcq", robot_act, ADDR_ROBOT_CONFIRM.ACT, 1)
+
+
+def task_robot():
+    """
+        读取机械臂状态，执行任务，然后确认
+    """
+    robot_get = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.GET, 1)[0]
+    robot_put = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.PUT, 1)[0]
+    robot_act = modbus_client.modbus_read("jcq", ADDR_ROBOT_STATUS.ACT, 1)[0]
+    task_robot_impl(robot_get, robot_put, robot_act)
+    modbus_client.modbus_write("jcq", robot_get, ADDR_ROBOT_CONFIRM.GET, 1)
+    modbus_client.modbus_write("jcq", robot_put, ADDR_ROBOT_CONFIRM.PUT, 1)
+    modbus_client.modbus_write("jcq", robot_act, ADDR_ROBOT_CONFIRM.ACT, 1)
