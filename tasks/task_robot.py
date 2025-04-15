@@ -6,7 +6,7 @@ from modbus.modbus_addresses import ADDR_ROBOT_STATUS, ADDR_ROBOT_CONFIRM
 from modbus.modbus_addresses import region_addr_to_region_name
 from modbus.modbus_addresses import in_region_cold, in_region_rewarm, in_region_wait
 from util.logger import logger
-from models import SolderModel, Station, Solder
+from models import SolderModel, Station, Solder, SolderStatus
 from util.db_connection import db_instance
 
 
@@ -35,12 +35,13 @@ def task_robot_impl(robot_get, robot_put, robot_act):
 
 
         if robot_act == 2: # 取完成
+            solder_moving.Status = SolderStatus.MOVING.value
             if in_region_cold(station_get): #从冷藏区取出，准备出库
                 #更新出库时间，用来回冷藏
                 solder_moving.ReadyOutDateTime = datetime.now()
                 logger.info(f"冷藏区 {station_get} 锡膏号 {solder_moving.SolderCode} 更新出冷藏区时间 {datetime.now()}")
 
-            elif in_region_rewarm(station_get) and not in_region_cold(station_put):
+            elif in_region_rewarm(station_get) and not in_region_cold(station_put): # 从回温区取下一步是搅拌
                 if solder_moving_model:
                     modbus_client.write_float(solder_moving_model.StirSpeed, 1522)
                     modbus_client.write_float(solder_moving_model.StirTime,  1526)
@@ -52,6 +53,7 @@ def task_robot_impl(robot_get, robot_put, robot_act):
         elif robot_act == 4: # 放完成
             modbus_client.modbus_write("jcq", 0, station_put, 1)
             modbus_client.modbus_write("jcq", 0, station_get, 1)
+            solder_moving.Status = SolderStatus.STATION.value
             solder_moving.StationID = station_put
 
             if in_region_cold(station_put):
