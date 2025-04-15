@@ -5,9 +5,9 @@ from models import Solder, SolderModel
 from util.db_connection import db_instance
 from util.logger import logger
 from modbus.client import modbus_client
-from modbus.modbus_addresses import ADDR_REGION_COLD_START, ADDR_REGION_COLD_END
-from modbus.modbus_addresses import ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END
-from modbus.modbus_addresses import ADDR_REGION_WAIT_START, ADDR_REGION_WAIT_END
+from modbus.modbus_addresses import ADDR_REGION_START_COLD,   ADDR_REGION_END_COLD
+from modbus.modbus_addresses import ADDR_REGION_START_REWARM, ADDR_REGION_END_REWARM
+from modbus.modbus_addresses import ADDR_REGION_START_WAIT,   ADDR_REGION_END_WAIT
 from modbus.modbus_addresses import in_region_cold, in_region_rewarm, in_region_wait
 
 
@@ -27,9 +27,9 @@ def task_update():
         solders: dict[str, Solder] = {solder.SolderCode: solder for solder in solders}
         solder_models: dict[str, SolderModel] = {model.Model: model for model in solder_models}
 
-        region_cold   = {k: 1 for k in range(ADDR_REGION_COLD_START,   ADDR_REGION_COLD_END+1)}
-        region_rewarm = {k: -1 for k in range(ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END+1)}
-        region_wait   = {k: -1 for k in range(ADDR_REGION_WAIT_START,   ADDR_REGION_WAIT_END+1)}
+        region_cold   = {k:  1 for k in range(ADDR_REGION_START_COLD,   ADDR_REGION_END_COLD + 1)}
+        region_rewarm = {k: -1 for k in range(ADDR_REGION_START_REWARM, ADDR_REGION_END_REWARM + 1)}
+        region_wait   = {k: -1 for k in range(ADDR_REGION_START_WAIT,   ADDR_REGION_END_WAIT + 1)}
 
         # region_rewarm_now = modbus_client.read_region(ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END - ADDR_REGION_REWARM_START + 1)
         # region_wait_now   = modbus_client.read_region(ADDR_REGION_WAIT_START,   ADDR_REGION_WAIT_END   - ADDR_REGION_WAIT_START + 1)
@@ -266,8 +266,8 @@ def task_update():
         region_wait   = [v for _, v in region_wait.items()]
         logger.info(f"待取区下个状态: {collections.Counter(region_wait)}")
 
-        modbus_client.write_region(ADDR_REGION_COLD_START,   region_cold)
-        modbus_client.write_region(ADDR_REGION_REWARM_START, region_rewarm)
-        modbus_client.write_region(ADDR_REGION_WAIT_START,   region_wait)
+        modbus_client.write_region(ADDR_REGION_START_COLD,   region_cold)
+        modbus_client.write_region(ADDR_REGION_START_REWARM, region_rewarm)
+        modbus_client.write_region(ADDR_REGION_START_WAIT,   region_wait)
 
         logger.info("点位状态更新完毕")

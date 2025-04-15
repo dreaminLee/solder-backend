@@ -5,9 +5,9 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from modbus.client import modbus_client
-from modbus.modbus_addresses import ADDR_REGION_COLD_START, ADDR_REGION_COLD_END
-from modbus.modbus_addresses import ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END
-from modbus.modbus_addresses import ADDR_REGION_WAIT_START, ADDR_REGION_WAIT_END
+from modbus.modbus_addresses import ADDR_REGION_START_COLD,   ADDR_REGION_END_COLD
+from modbus.modbus_addresses import ADDR_REGION_START_REWARM, ADDR_REGION_END_REWARM
+from modbus.modbus_addresses import ADDR_REGION_START_WAIT,   ADDR_REGION_END_WAIT
 from modbus.modbus_addresses import in_region_rewarm, in_region_wait
 from tasks.scheduler import file_path
 from util.MES_request import send_take_log
@@ -489,7 +489,7 @@ def unordered_solder():
         solders_unordered = db_session.query(Solder, SolderModel.MinLcTime
                                      ).join(SolderModel, SolderModel.Model == Solder.Model
                                      ).filter(
-            Solder.StationID.between(ADDR_REGION_COLD_START, ADDR_REGION_COLD_END),
+            Solder.StationID.between(ADDR_REGION_START_COLD, ADDR_REGION_END_COLD),
             Solder.OrderUser == None,
         ).all()
         return Response.SUCCESS([
@@ -570,7 +570,7 @@ def order_solder():
         solders_unordered = session.query(Solder, SolderModel.MinLcTime
                                   ).join(SolderModel, SolderModel.Model == Solder.Model
                                   ).filter(
-            Solder.StationID.between(ADDR_REGION_COLD_START, ADDR_REGION_COLD_END),
+            Solder.StationID.between(ADDR_REGION_START_COLD, ADDR_REGION_END_COLD),
             Solder.OrderUser == None,
             Solder.Model == model,
         ).order_by(desc(Solder.BackLCTimes)).all()
@@ -609,8 +609,8 @@ def daiqu_solder():
             ).join(SolderModel, SolderModel.Model == Solder.Model
             ).filter(
             or_(
-                Solder.StationID.between(ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END),
-                Solder.StationID.between(ADDR_REGION_WAIT_START, ADDR_REGION_WAIT_END),
+                Solder.StationID.between(ADDR_REGION_START_REWARM, ADDR_REGION_END_REWARM),
+                Solder.StationID.between(ADDR_REGION_START_WAIT,   ADDR_REGION_END_WAIT),
             )
         ).all()
         solders_outable = [
@@ -645,8 +645,8 @@ def accessible_solder():
     with db_instance.get_session() as db_session:
         solders_in_rewarm_wait = db_session.query(Solder).filter(
             or_(
-                Solder.StationID.between(ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END),
-                Solder.StationID.between(ADDR_REGION_WAIT_START, ADDR_REGION_WAIT_END),
+                Solder.StationID.between(ADDR_REGION_START_REWARM, ADDR_REGION_END_REWARM),
+                Solder.StationID.between(ADDR_REGION_START_WAIT,   ADDR_REGION_END_WAIT),
             )
         ).all()
         return Response.SUCCESS([

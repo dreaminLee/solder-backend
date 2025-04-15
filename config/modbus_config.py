@@ -9,14 +9,18 @@ serial_parity = 'N' # PARITY_NONE, PARITY_EVEN, PARITY_ODD, PARITY_MARK, PARITY_
 serial_stopbits = 1 # STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO = (1, 1.5, 2)
 serial_timeout = 1
 region_setting = {
-    "addr_region_enter_start": 901,
-    "addr_region_enter_end": 928,
-    "addr_region_cold_start": 201,
-    "addr_region_cold_end": 580,
-    "addr_region_rewarm_start": 603,
-    "addr_region_rewarm_end": 700,
-    "addr_region_wait_start": 803,
-    "addr_region_wait_end": 840
+    "addr_region_start_enter":  901,
+    "addr_region_end_enter":    928,
+    "addr_region_start_scan":   190,
+    "addr_region_end_scan":     190,
+    "addr_region_start_cold":   201,
+    "addr_region_end_cold":     580,
+    "addr_region_start_rewarm": 603,
+    "addr_region_end_rewarm":   700,
+    "addr_region_start_wait":   803,
+    "addr_region_end_wait":     840,
+    "addr_region_start_fetch":  891,
+    "addr_region_end_fetch":    893,
 }
 
 locals().update(config_dict["modbus_config"])

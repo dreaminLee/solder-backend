@@ -23,14 +23,18 @@
         "serial_stopbits": 1,
         "serial_timeout": 1,
         "region_setting": {
-            "addr_region_enter_start": 901,
-            "addr_region_enter_end": 928,
-            "addr_region_cold_start": 201,
-            "addr_region_cold_end": 580,
-            "addr_region_rewarm_start": 603,
-            "addr_region_rewarm_end": 700,
-            "addr_region_wait_start": 803,
-            "addr_region_wait_end": 840
+            "addr_region_start_enter":  901,
+            "addr_region_end_enter":    928,
+            "addr_region_start_scan":   190,
+            "addr_region_end_scan":     190,
+            "addr_region_start_cold":   201,
+            "addr_region_end_cold":     220,
+            "addr_region_start_rewarm": 601,
+            "addr_region_end_rewarm":   620,
+            "addr_region_start_wait":   801,
+            "addr_region_end_wait":     820,
+            "addr_region_start_fetch":  891,
+            "addr_region_end_fetch":    893
         }
     },
     "barcode_parse_config": {

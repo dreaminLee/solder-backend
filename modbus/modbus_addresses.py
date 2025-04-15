@@ -35,39 +35,44 @@ class REGION_TYPE(Enum):
 
 ADDR_STIRING_STATUS = 741
 
-ADDR_REGION_ENTER_START  = region_setting["addr_region_enter_start"]
-ADDR_REGION_ENTER_END    = region_setting["addr_region_enter_end"]
-ADDR_REGION_SCAN         = 190 # 仅作识别使用，禁止读写
-ADDR_REGION_COLD_START   = region_setting["addr_region_cold_start"]
-ADDR_REGION_COLD_END     = region_setting["addr_region_cold_end"]
-ADDR_REGION_REWARM_START = region_setting["addr_region_rewarm_start"]
-ADDR_REGION_REWARM_END   = region_setting["addr_region_rewarm_end"]
-ADDR_REGION_WAIT_START   = region_setting["addr_region_wait_start"]
-ADDR_REGION_WAIT_END     = region_setting["addr_region_wait_end"]
-ADDR_REGION_FETCH_START  = 891
-ADDR_REGION_FETCH_END    = 892
-
-
-def region_addr_to_region_name(addr):
-    if ADDR_REGION_ENTER_START  <= addr and addr <= ADDR_REGION_ENTER_END:
-        return "入柜区"
-    elif ADDR_REGION_SCAN == addr:
-        return "扫码区"
-    elif ADDR_REGION_COLD_START   <= addr and addr <= ADDR_REGION_COLD_END:
-        return "冷藏区"
-    elif ADDR_REGION_REWARM_START <= addr and addr <= ADDR_REGION_REWARM_END:
-        return "回温区"
-    elif ADDR_REGION_WAIT_START   <= addr and addr <= ADDR_REGION_WAIT_END:
-        return "待取区"
-    elif ADDR_REGION_FETCH_START  <= addr and addr <= ADDR_REGION_FETCH_END:
-        return "取料区"
-    else:
-        return "未知"
+ADDR_REGION_START_ENTER  = region_setting["addr_region_start_enter"]
+ADDR_REGION_END_ENTER    = region_setting["addr_region_end_enter"]
+ADDR_REGION_START_SCAN   = region_setting["addr_region_start_scan"]
+ADDR_REGION_END_SCAN     = region_setting["addr_region_end_scan"]
+ADDR_REGION_START_COLD   = region_setting["addr_region_start_cold"]
+ADDR_REGION_END_COLD     = region_setting["addr_region_end_cold"]
+ADDR_REGION_START_REWARM = region_setting["addr_region_start_rewarm"]
+ADDR_REGION_END_REWARM   = region_setting["addr_region_end_rewarm"]
+ADDR_REGION_START_WAIT   = region_setting["addr_region_start_wait"]
+ADDR_REGION_END_WAIT     = region_setting["addr_region_end_wait"]
+ADDR_REGION_START_FETCH  = region_setting["addr_region_start_fetch"]
+ADDR_REGION_END_FETCH    = region_setting["addr_region_end_fetch"]
 
 
 def in_region(region_start, region_end, addr):
     return region_start <= addr and addr <= region_end
 
-in_region_cold   = functools.partial(in_region, ADDR_REGION_COLD_START,   ADDR_REGION_COLD_END)
-in_region_rewarm = functools.partial(in_region, ADDR_REGION_REWARM_START, ADDR_REGION_REWARM_END)
-in_region_wait   = functools.partial(in_region, ADDR_REGION_WAIT_START,   ADDR_REGION_WAIT_END)
+
+in_region_enter  = functools.partial(in_region, ADDR_REGION_START_ENTER, ADDR_REGION_END_ENTER)
+in_region_scan   = functools.partial(in_region, ADDR_REGION_START_SCAN, ADDR_REGION_END_SCAN)
+in_region_cold   = functools.partial(in_region, ADDR_REGION_START_COLD, ADDR_REGION_END_COLD)
+in_region_rewarm = functools.partial(in_region, ADDR_REGION_START_REWARM, ADDR_REGION_END_REWARM)
+in_region_wait   = functools.partial(in_region, ADDR_REGION_START_WAIT, ADDR_REGION_END_WAIT)
+in_region_fetch  = functools.partial(in_region, ADDR_REGION_START_FETCH, ADDR_REGION_END_FETCH)
+
+
+def region_addr_to_region_name(addr):
+    if in_region_enter(addr):
+        return "入柜区"
+    elif in_region_scan(addr):
+        return "扫码区"
+    elif in_region_cold(addr):
+        return "冷藏区"
+    elif in_region_rewarm(addr):
+        return "回温区"
+    elif in_region_wait(addr):
+        return "待取区"
+    elif in_region_fetch(addr):
+        return "取料区"
+    else:
+        return "未知"
