@@ -51,7 +51,7 @@ def detect():
             continue
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = classfier.detectMultiScale(gray, 1.2, 5, minSize=(100, 100))
+        faces = classifier.detectMultiScale(gray, 1.2, 5, minSize=(200, 200))
 
         if not len(faces):
             print("未检测到人脸")

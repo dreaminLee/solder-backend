@@ -50,7 +50,7 @@ def collect(user_id):
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = classifier.detectMultiScale(
-            gray, scaleFactor=1.2, minNeighbors=5, minSize=(100, 100)
+            gray, scaleFactor=1.2, minNeighbors=5, minSize=(200, 200)
         )
 
         if collect_flag:
