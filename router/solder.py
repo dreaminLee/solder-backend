@@ -78,6 +78,11 @@ def get_solders():
             solders = session.query(Solder, Station.StaArea).join(Station, Solder.StationID == Station.StationID).all()
         if not solders:
             return Response.SUCCESS()
+        
+        def datetime2str(dt):
+            if isinstance(dt, datetime):
+                return dt.strftime('%Y-%m-%d %H:%M:%S')
+            return None
 
         # 构建返回结果
         solder_list = []
@@ -88,25 +93,25 @@ def get_solders():
                 "StationID": solder.StationID,
                 "ExpireDate": solder.ExpireDate,
                 "StorageUser": solder.StorageUser,
-                "StorageDateTime": solder.StorageDateTime,
+                "StorageDateTime": datetime2str(solder.StorageDateTime),
                 "OrderUser": solder.OrderUser,
-                "OrderDateTime": solder.OrderDateTime,
+                "OrderDateTime": datetime2str(solder.OrderDateTime),
                 "RewarmStartUser": solder.RewarmStartUser,
-                "RewarmStartDateTime": solder.RewarmStartDateTime,
-                "RewarmEndDateTime": solder.RewarmEndDateTime,
-                "StirStartDateTime": solder.StirStartDateTime,
-                "ReadyOutDateTime": solder.ReadyOutDateTime,
+                "RewarmStartDateTime": datetime2str(solder.RewarmStartDateTime),
+                "RewarmEndDateTime": datetime2str(solder.RewarmEndDateTime),
+                "StirStartDateTime": datetime2str(solder.StirStartDateTime),
+                "ReadyOutDateTime": datetime2str(solder.ReadyOutDateTime),
                 "OutUser": solder.OutUser,
-                "OutDateTime": solder.OutDateTime,
+                "OutDateTime": datetime2str(solder.OutDateTime),
                 "Decoded": solder.Decoded,
                 "DecodedUser": solder.DecodedUser,
-                "DecodedDateTime": solder.DecodedDateTime,
+                "DecodedDateTime": datetime2str(solder.DecodedDateTime),
                 "InTimes": solder.InTimes,
                 "CurrentFlow": solder.CurrentFlow,
                 "Code": solder.Code,
                 "WorkNum": solder.WorkNum,
                 "MesError": solder.MesError,
-                "AgainColdDateTime": solder.AgainColdDateTime,
+                "AgainColdDateTime": datetime2str(solder.AgainColdDateTime),
                 "StaArea": area
             }
             solder_list.append(solder_data)
