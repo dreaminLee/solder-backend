@@ -715,13 +715,13 @@ def out_solder():
                (solder_model.JiaobanRule == "出库搅拌" and
                 in_region_rewarm(solder.StationID) and
                 modbus_client.modbus_read("jcq", solder.StationID, 1)[0] == 0 and
-                datetime.now() >= solder.RewarmEndDateTime or solder.OrderUser != None)
+                (datetime.now() >= solder.RewarmEndDateTime or solder.OrderUser != None))
         ]
 
         if len(solders_outable) < amount:
             return Response.FAIL(f"未找到足够的锡膏记录，当前只有 {len(solders_outable)} 条")
         
-        for solder, rule in solders_outable:
+        for solder, rule in solders_outable[:amount]:
             solder_flow_record = SolderFlowRecord(
                 UserID=user_id,
                 UserName=user_name,
