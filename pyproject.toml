@@ -1,0 +1,27 @@
+[project]
+name = "solder-backend-py312"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "flask>=3.1.0",
+    "flask-apscheduler>=1.13.1",
+    "flask-jwt-extended>=4.7.1",
+    "flask-sqlalchemy>=3.1.1",
+    "mysqlclient>=2.2.7",
+    "opencv-contrib-python>=4.11.0.86",
+    "opencv-python>=4.11.0.86",
+    "pillow>=11.2.1",
+    "pycryptodome>=3.22.0",
+    "pymodbus>=3.9.1",
+    "pyserial>=3.5",
+    "requests>=2.32.3",
+    "sqlalchemy>=2.0.40",
+]
+
+[dependency-groups]
+dev = [
+    "ipython>=9.1.0",
+    "pyinstaller>=6.13.0",
+]
