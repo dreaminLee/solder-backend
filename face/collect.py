@@ -6,8 +6,8 @@ from PIL import ImageFont, ImageDraw, Image
 import numpy as np
 from pathlib import Path
 
-from face.facercg_config import samples_path, classifier_path, train_size
-from face.draw_chs import draw_chs
+from config.face_config import samples_path, classifier_path, train_size
+from .draw_chs import draw_chs
 
 def set_window_topmost(window_name):
     """使用 Windows API 将窗口置顶"""
@@ -21,8 +21,7 @@ def collect(user_id):
     sample_num = 0
 
     # 打开摄像头
-    #capture = cv2.VideoCapture(0)
-    capture = cv2.VideoCapture( cv2.CAP_DSHOW)
+    capture = cv2.VideoCapture(0)
 
     collect_flag = False
     def mouse_callback(event, x, y, flags, param):

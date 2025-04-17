@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+import logging.handlers
 
 # 创建日志记录器
 logger = logging.getLogger(__name__)
@@ -7,7 +8,7 @@ logger.setLevel(logging.DEBUG)  # 设置日志级别
 
 # 创建文件处理器，日志将保存到 log 文件中
 log_filename = datetime.now().strftime("log_%Y%m%d_%H.log")
-file_handler = logging.FileHandler(log_filename)
+file_handler = logging.FileHandler(log_filename, encoding="utf8")
 file_handler.setLevel(logging.DEBUG)
 
 # 创建格式化器，设置日志格式
@@ -21,3 +22,4 @@ logger.addHandler(file_handler)
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
+logger.propagate = False

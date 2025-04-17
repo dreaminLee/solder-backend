@@ -1,5 +1,6 @@
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
+from config.mysql_config import sqlalchemy_database_uri
 
 class Database:
     _instance = None
@@ -11,13 +12,7 @@ class Database:
         return cls._instance
 
     def _initialize(self):
-        HOSTNAME = "127.0.0.1"
-        PORT = "3306"
-        USERNAME = "root"
-        PASSWORD = "123456"
-        DATABASE = "solder"
-        DATABASE_URL = f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOSTNAME}:{PORT}/{DATABASE}?charset=utf8mb4'
-        self.engine = create_engine(DATABASE_URL, echo=False)
+        self.engine = create_engine(sqlalchemy_database_uri, echo=False)
         self.Session = sessionmaker(bind=self.engine)
 
     def get_session(self):

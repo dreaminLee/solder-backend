@@ -9,7 +9,7 @@ from modbus.client import modbus_client
 from util.db_connection import db_instance
 from models import TemperatureRecord
 from util.Response import Response
-from util.thread_pool import executor
+# from util.thread_pool import executor
 
 temperature_bp = Blueprint('temperature', __name__)
 

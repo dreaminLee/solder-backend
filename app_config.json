@@ -1,0 +1,55 @@
+{
+    "face_config": {
+        "samples_path": "./sample",
+        "classifier_path": "./face/haarcascade_frontalface_default.xml",
+        "recognizer_path": "./face/recognizer.yml",
+        "fontfile_path": "./face/msyh.ttc",
+        "train_size": 30
+    },
+    "mysql_config": {
+        "hostname": "127.0.0.1",
+        "port": "3306",
+        "username": "root",
+        "password": "123456",
+        "db_name": "solder"
+    },
+    "modbus_config": {
+        "tcp_host": "127.0.0.1",
+        "tcp_port": 502,
+        "serial_port": "COM1",
+        "serial_baudrate": 115200,
+        "serial_bytesize": 8,
+        "serial_parity": "N",
+        "serial_stopbits": 1,
+        "serial_timeout": 1,
+        "region_setting": {
+            "addr_region_start_enter":  901,
+            "addr_region_end_enter":    928,
+            "addr_region_start_scan":   190,
+            "addr_region_end_scan":     190,
+            "addr_region_start_cold":   201,
+            "addr_region_end_cold":     220,
+            "addr_region_start_rewarm": 601,
+            "addr_region_end_rewarm":   620,
+            "addr_region_start_wait":   801,
+            "addr_region_end_wait":     820,
+            "addr_region_start_fetch":  891,
+            "addr_region_end_fetch":    893
+        }
+    },
+    "barcode_parse_config": {
+        "seperator": "&",
+        "model_row": 1,
+        "prod_date_row": -1,
+        "expire_date_row": -1,
+        "shelf_life_row": -1,
+        "model_start_pos": -1,
+        "prod_date_start_pos": -1,
+        "expire_date_start_pos": -1,
+        "shelf_life_start_pos": -1,
+        "model_length": -1,
+        "prod_date_length": -1,
+        "expire_date_length": -1,
+        "shelf_life_length": -1
+    }
+}

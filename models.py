@@ -1,3 +1,5 @@
+from enum import Enum, IntEnum
+
 from extends import db
 
 # 建表视图
@@ -37,9 +39,9 @@ class Alarm(db.Model):
 
     ID =  db.Column(db.Integer, primary_key=True, autoincrement=True)
     AlarmText =  db.Column(db.String(100), nullable=False)
-    StartTime =  db.Column(db.DateTime, nullable=True)
-    EndTime = db.Column(db.DateTime, nullable=True)
-    Kind = db.Column(db.String(10), nullable=True)
+    StartTime =  db.Column(db.DateTime)
+    EndTime = db.Column(db.DateTime)
+    Kind = db.Column(db.String(10))
 
     def to_dict(self):
         return {
@@ -67,15 +69,21 @@ class Order(db.Model):
             'datetime': self.DateTime.strftime('%Y-%m-%d %H:%M:%S')
         }
 
+
+class SolderStatus(IntEnum):
+    STATION  = 0
+    MOVING   = 1
+
+
 class Solder(db.Model):
     __tablename__ = 'solder'
 
     SolderCode = db.Column(db.String(100), primary_key=True)  # 锡膏码
     Model = db.Column(db.String(100), nullable=False)  # 型号
     StationID = db.Column(db.Integer, nullable=False)  # 所在工位
-    ExpireDate = db.Column(db.DateTime, nullable=False)  # 过期日期
-    ProductDate = db.Column(db.DateTime, nullable=False)  # 生产日期
-    ShelfLife = db.Column(db.Integer, nullable=False)  # 保质期
+    ExpireDate = db.Column(db.DateTime)  # 过期日期
+    ProductDate = db.Column(db.DateTime)  # 生产日期
+    ShelfLife = db.Column(db.Integer)  # 保质期
     BackLCTimes = db.Column(db.Integer)  # 回冷藏区次数
     Common2 = db.Column(db.String(100))  # 通用2
     Common3 = db.Column(db.String(100))  # 通用3
@@ -90,15 +98,16 @@ class Solder(db.Model):
     ReadyOutDateTime = db.Column(db.DateTime)  # 准备出柜时间
     OutUser = db.Column(db.String(100))  # 取出人
     OutDateTime = db.Column(db.DateTime)  # 取出时间
-    Decoded = db.Column(db.Boolean, nullable=False, default=False)  # 是否解码
+    Decoded = db.Column(db.Boolean)  # 是否解码
     DecodedUser = db.Column(db.String(100))  # 解码人
     DecodedDateTime = db.Column(db.DateTime)  # 解码时间
-    InTimes = db.Column(db.Integer, nullable=False)  # 入柜次数
-    CurrentFlow = db.Column(db.Integer, nullable=False)  # 当前流程
-    Code = db.Column(db.String(200), nullable=False)  # 二维码
+    InTimes = db.Column(db.Integer)  # 入柜次数
+    CurrentFlow = db.Column(db.Integer)  # 当前流程
+    Code = db.Column(db.String(200))  # 二维码
     WorkNum = db.Column(db.String(100))  # 工单号
     MesError = db.Column(db.String(200))  # 其它错误内容
     AgainColdDateTime = db.Column(db.DateTime)  # 再次冷藏时间
+    Status = db.Column(db.Integer) # 锡膏状态
 
     def to_dict(self):
         return {
@@ -138,17 +147,17 @@ class SolderModel(db.Model):
 
     Model = db.Column(db.String(100), primary_key=True)  # 型号
     ModelSysName = db.Column(db.String(100), nullable=False, unique=True)  # 系统名称
-    MinColdNum = db.Column(db.Integer, nullable=False)  # 最小冷藏数
-    RewarmNum = db.Column(db.Integer, nullable=False)  # 回温次数
-    ReadyOutNum = db.Column(db.Integer, nullable=False)  # 准备出柜次数
+    MinColdNum = db.Column(db.Integer)  # 最小冷藏数
+    RewarmNum = db.Column(db.Integer, nullable=False)  # 保持回温数量
+    ReadyOutNum = db.Column(db.Integer, nullable=False)  # 保持待取数量
     StirTime = db.Column(db.Integer, nullable=False)  # 搅拌时间
     StirSpeed = db.Column(db.Integer, nullable=False)  # 搅拌速度
     RewarmTime = db.Column(db.Integer, nullable=False)  # 回温时间
     RewarmMaxTime = db.Column(db.Integer, nullable=False)  # 最大回温时间
-    ReadyOutTimeOut = db.Column(db.Integer, nullable=False)  # 准备出柜超时
-    ShelfLife = db.Column(db.Integer, nullable=False)  # 保质期
-    ZOffSet = db.Column(db.Float, nullable=False)  # Z轴偏移
-    ModifyDateTime = db.Column(db.DateTime, nullable=False)  # 修改时间
+    ReadyOutTimeOut = db.Column(db.Integer, nullable=False)  # 待取区超时时间
+    ShelfLife = db.Column(db.Integer)  # 保质期
+    ZOffSet = db.Column(db.Float)  # Z轴偏移
+    ModifyDateTime = db.Column(db.DateTime)  # 修改时间
     IfJiaoban = db.Column(db.String(255), default=None)  # 首次出库是否搅拌
     JiaobanRule = db.Column(db.String(255), default=None)  # 搅拌规则
     MinLcTime = db.Column(db.Integer, default=None)  # 最小冷藏时间
@@ -157,20 +166,6 @@ class SolderModel(db.Model):
     IfBackAfterJiaoban = db.Column(db.Integer, default=None)  # 搅拌后是否回冰柜
     TwiceChaoshiJinzhiInBinggui = db.Column(db.Integer, default=None)  # 二次超时禁止入冰柜
     TwiceInKu = db.Column(db.String(255), default=None)  # 再次入库选项
-    # 新增字段
-    Separator = db.Column(db.String(10), default=None)  # 分隔符
-    ModelStart = db.Column(db.Integer, default=None)  # 型号起始位置
-    ModelSeparatorStart = db.Column(db.Integer, default=None)  # 型号起始分隔符位置
-    ModelLength = db.Column(db.Integer, default=None)  # 型号长度
-    ProductionDateStart = db.Column(db.Integer, default=None)  # 生产日期起始位置
-    ProductionDateSeparatorStart = db.Column(db.Integer, default=None)  # 生产日期起始分隔符位置
-    ProductionDateLength = db.Column(db.Integer, default=None)  # 生产日期长度
-    ShelfLifeStart = db.Column(db.Integer, default=None)  # 保质期起始位置
-    ShelfLifeSeparatorStart = db.Column(db.Integer, default=None)  # 保质期起始分隔符位置
-    ShelfLifeLength = db.Column(db.Integer, default=None)  # 保质期长度
-    ExpirationDateStart = db.Column(db.Integer, default=None)  # 过期日期起始位置
-    ExpirationDateSeparatorStart = db.Column(db.Integer, default=None)  # 过期日期起始分隔符位置
-    ExpirationDateLength = db.Column(db.Integer, default=None)  # 过期日期长度
     def to_dict(self):
         return {
             'model': self.Model,
@@ -194,65 +189,6 @@ class SolderModel(db.Model):
             'if_back_after_jiaoban': self.IfBackAfterJiaoban,
             'twice_chaoshi_jinzhi_in_binggui': self.TwiceChaoshiJinzhiInBinggui,
             'twice_in_ku': self.TwiceInKu,
-            # 新增字段
-            'separator': self.Separator,
-            'model_start': self.ModelStart,
-            'model_separator_start': self.ModelSeparatorStart,
-            'model_length': self.ModelLength,
-            'production_date_start': self.ProductionDateStart,
-            'production_date_separator_start': self.ProductionDateSeparatorStart,
-            'production_date_length': self.ProductionDateLength,
-            'shelf_life_start': self.ShelfLifeStart,
-            'shelf_life_separator_start': self.ShelfLifeSeparatorStart,
-            'shelf_life_length': self.ShelfLifeLength,
-            'expiration_date_start': self.ExpirationDateStart,
-            'expiration_date_separator_start': self.ExpirationDateSeparatorStart,
-            'expiration_date_length': self.ExpirationDateLength
-        }
-
-
-class Barcoderule(db.Model):
-    __tablename__ = 'barcoderule'
-
-    ID = db.Column(db.Integer, primary_key=True)
-    ModelStartLab = db.Column(db.Integer, default=None)
-    ModelEndLab = db.Column(db.Integer, default=None)
-    ModelStart = db.Column(db.Integer, default=None)
-    ModelLength = db.Column(db.Integer, default=None)
-    ShelfLifeStart = db.Column(db.Integer, default=None)
-    ShelfLifeLength = db.Column(db.Integer, default=None)
-    ShelfLifeStartLab = db.Column(db.Integer, default=None)
-    ShelfLifeEndLab = db.Column(db.Integer, default=None)
-    ProductTimeStart = db.Column(db.Integer, default=None)
-    ProductTimeLength = db.Column(db.Integer, default=None)
-    ExpTimeStart = db.Column(db.Integer, default=None)
-    ExpTimeLength = db.Column(db.Integer, default=None)
-    CodeStart = db.Column(db.Integer, default=None)
-    CodeLength = db.Column(db.Integer, default=None)
-    CodeStartLab = db.Column(db.Integer, default=None)
-    CodeEndLab = db.Column(db.Integer, default=None)
-    Length = db.Column(db.Integer, default=None)
-
-    def to_dict(self):
-        return {
-            'ID': self.ID,
-            'ModelStartLab': self.ModelStartLab,
-            'ModelEndLab': self.ModelEndLab,
-            'ModelStart': self.ModelStart,
-            'ModelLength': self.ModelLength,
-            'ShelfLifeStart': self.ShelfLifeStart,
-            'ShelfLifeLength': self.ShelfLifeLength,
-            'ShelfLifeStartLab': self.ShelfLifeStartLab,
-            'ShelfLifeEndLab': self.ShelfLifeEndLab,
-            'ProductTimeStart': self.ProductTimeStart,
-            'ProductTimeLength': self.ProductTimeLength,
-            'ExpTimeStart': self.ExpTimeStart,
-            'ExpTimeLength': self.ExpTimeLength,
-            'CodeStart': self.CodeStart,
-            'CodeLength': self.CodeLength,
-            'CodeStartLab': self.CodeStartLab,
-            'CodeEndLab': self.CodeEndLab,
-            "Length" : self.Length,
         }
 
 
@@ -275,24 +211,45 @@ class TemperatureRecord(db.Model):
             'date_time': self.DateTime.strftime('%Y-%m-%d %H:%M:%S'),  # 格式化日期时间
         }
 
+
+class SolderFlowRecordEvent(Enum):
+    FROM_REGION_COLD   = "出冷藏区"
+    FROM_REGION_REWARM = "出回温区"
+    FROM_REGION_WAIT   = "出待取区"
+
+    TO_REGION_COLD   = "进冷藏区"
+    TO_REGION_REWARM = "进回温区"
+    TO_REGION_WAIT   = "进待取区"
+
+    START_STIR  = "开始搅拌"
+    FINISH_STIR = "结束搅拌"
+
+    SCAN_FAIL = "扫码失败"
+    REQUEST_IN  = "请求入库"
+    REQUEST_OUT = "请求出库"
+    REQUEST_IN_GOOD = "入库成功"
+    REQUEST_OUT_FINISH = "出库完成"
+
+
 class SolderFlowRecord(db.Model):
     __tablename__ = 'solderflowrecord'
     id = db.Column(db.Integer, primary_key=True,  autoincrement=True)
-    SolderCode = db.Column(db.String(100), nullable=False)  # 锡膏码
-    UserID = db.Column(db.String(100), nullable=False)  # 工号
-    UserName = db.Column(db.String(100), nullable=False)  # 姓名
-    Type = db.Column(db.String(100), nullable=False)  # 类型
-    DateTime = db.Column(db.DateTime, nullable=False)  # 日期时间
+    Event      = db.Column(db.String(100), nullable=False)  # 事件
+    DateTime   = db.Column(db.DateTime,    nullable=False)  # 日期时间
+    SolderCode = db.Column(db.String(100))  # 锡膏码
+    UserID     = db.Column(db.String(100))  # 用户ID
+    UserName   = db.Column(db.String(100))  # 用户名
 
     def to_dict(self):
         # 将 ORM 对象转换为字典，方便返回 JSON 格式
         return {
+            'event': self.Event,
+            'date_time': self.DateTime.strftime('%Y-%m-%d %H:%M:%S'),  # 格式化为字符串
             'solder_code': self.SolderCode,
             'user_id': self.UserID,
             'user_name': self.UserName,
-            'type': self.Type,
-            'date_time': self.DateTime.strftime('%Y-%m-%d %H:%M:%S'),  # 格式化为字符串
         }
+
 
 class Station(db.Model):
     __tablename__ = 'station'

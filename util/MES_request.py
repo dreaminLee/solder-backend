@@ -8,15 +8,6 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# 从文件加载 token
-def load_token():
-    TOKEN_FILE_PATH = "token.json"
-    if os.path.exists(TOKEN_FILE_PATH):
-        with open(TOKEN_FILE_PATH, "r") as file:
-            data = json.load(file)
-            return data.get("token"), data.get("expiration")
-    return None, None
-
 
 # 缓存已发送的日志信息
 sent_logs_cache = {}
@@ -93,6 +84,7 @@ def send_take_log(rid, user_login):
 # 4. 搅拌操作
 def send_mix_log(rid, user_login):
     return send_log("018006", rid, 'LZ01')
+
 
 # 配置目标 URL 和请求头
 url = "http://192.168.1.8:8090/emes/api/Auth/login"

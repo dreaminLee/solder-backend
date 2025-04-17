@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 
-from .facercg_config import fontfile_path
+from config.face_config import fontfile_path
 
 def draw_chs(frame, text, position, text_color, text_size):
     img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
