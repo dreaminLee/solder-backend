@@ -56,7 +56,11 @@ def login():
         additional_claims={'user_id': mysqlAdminDO.UserID}
     )
     access_token = f"Bearer {access_token}"
-    res_list = {"token": access_token}
+    res_list = {"token": access_token,
+                'user_id': mysqlAdminDO.UserID,
+                'user_name': mysqlAdminDO.UserName,
+                'user_grade': mysqlAdminDO.UserGrade
+                }
     # 将 UserID 写入 user_cache.txt 文件
     user_cache_file = "user_cache.txt"
     # 清空文件内容
@@ -243,7 +247,11 @@ def face_detect():
             additional_claims={'user_id': mysqlAdminDO.UserID}
         )
         access_token = f"Bearer {access_token}"
-        res_list = {"token": access_token, "user_id":user_id}
+        res_list = {"token": access_token,
+                    'user_id': mysqlAdminDO.UserID,
+                    'user_name': mysqlAdminDO.UserName,
+                    'user_grade': mysqlAdminDO.UserGrade
+                    }
         # 将 UserID 写入 user_cache.txt 文件
         user_cache_file = "user_cache.txt"
         with open(user_cache_file, "w") as file:
