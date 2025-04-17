@@ -14,7 +14,7 @@ class ModbusClientSingleton:
     _instance = None
     _client = None
 
-    def __new__(cls, host='192.168.1.88', port=502):
+    def __new__(cls, host='127.0.0.1', port=502):
         """创建单例客户端，并在创建时自动连接设备"""
         if cls._instance is None:
             cls._instance = super(ModbusClientSingleton, cls).__new__(cls)

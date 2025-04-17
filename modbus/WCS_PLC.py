@@ -3,7 +3,7 @@ import random
 import time
 
 # 设置目标IP地址和端口
-host = '192.168.1.88'
+host = '127.0.0.1'
 port = 502  # 默认的 Modbus TCP 端口
 
 # 创建 Modbus TCP 客户端连接
