@@ -282,3 +282,21 @@ class Station(db.Model):
             'solder_code': self.SolderCode,
             'modify_datetime': self.ModifyDateTime
         }
+
+
+class Station2(db.Model):
+    __tablename__ = 'station2'
+
+    _id = db.Column(db.Integer, primary_key=True)
+    MoveID = db.Column(db.Integer)
+    StationID = db.Column(db.Integer)
+    Region = db.Column(db.String())
+    Comment = db.Column(db.String())
+
+    def to_dict(self):
+        return {
+            "move_id": self.MoveID,
+            "address": self.StationID,
+            "region": self.Region,
+            "comment": self.Comment
+        }
