@@ -15,6 +15,9 @@ def task_scan_impl(scanner_req, scanner_pos):
             return 0
 
         barcode_scanned = scan()
+        if not barcode_scanned:
+            return 2
+
         logger.info(f"扫到条码: {barcode_scanned}")
         open("res_asc.txt", "w", encoding="utf8").write(barcode_scanned)
         parse_result = parse_barcode(barcode_scanned)
