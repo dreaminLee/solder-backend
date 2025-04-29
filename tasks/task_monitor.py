@@ -35,8 +35,12 @@ def task_monitor():
     with db_instance.get_session() as db_session:
         for code, station_id_now, sstatus_now in db_session.query(Solder.SolderCode, Solder.StationID, Solder.Status).all():
             stat_now = solder_stat(station_id_now, sstatus_now)
-            stat_last: solder_stat = solder_status_dict[code]
-            if stat_now != stat_last:
+            stat_last: solder_stat = solder_status_dict.get(code)
+
+            if not stat_last:
+                solder_status_dict[code] = stat_now
+
+            elif stat_now != stat_last:
                 logger.info(f"锡膏号 {code} 状态更新 station_id: {stat_last.station_id} -> {stat_now.station_id}, status: {stat_last.status} -> {stat_now.status}")
 
                 if (stat_last.status == SolderStatus.STATION and
@@ -83,4 +87,5 @@ def task_monitor():
 
                 db_session.commit()
                 stat_last.update(stat_now)
-                return
+
+            return
