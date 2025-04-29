@@ -5,7 +5,7 @@ from modbus.scan import scan
 from util.parse import parse_barcode
 from util.db_connection import db_instance
 from util.logger import logger
-from models import User, Solder, SolderFlowRecord, SolderFlowRecordEvent
+from models import User, Solder, SolderFlowRecord, SolderFlowRecordEvent, Station2
 
 
 def task_scan_impl(scanner_req, scanner_pos):
@@ -28,6 +28,7 @@ def task_scan_impl(scanner_req, scanner_pos):
         # productDate = parse_result['product_date']
         # expireDate = parse_result['expire_date']
         # shelfLife = parse_result['shelf_life']
+        scan_station_id = db_session.query(Station2.StationID).filter(Station2.Region == "扫码区").scalar()
 
 
         user_cache_file = "user_cache.txt"
@@ -36,7 +37,7 @@ def task_scan_impl(scanner_req, scanner_pos):
         user_name = user_name if user_name else "未知用户"
 
         # 删除已扫码但未进入冷藏柜的锡膏
-        old_solder = db_session.query(Solder).filter(Solder.StationID == 190).scalar()
+        old_solder = db_session.query(Solder).filter(Solder.StationID == scan_station_id).scalar()
         if old_solder:
             db_session.delete(old_solder)
 
@@ -53,7 +54,7 @@ def task_scan_impl(scanner_req, scanner_pos):
             # ShelfLife = shelfLife,
             InTimes=in_times+1,
             BackLCTimes=0,
-            StationID=190,
+            StationID=scan_station_id,
             StorageUser=user_name,
             StorageDateTime=datetime.now()
         )

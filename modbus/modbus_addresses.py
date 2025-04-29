@@ -1,6 +1,8 @@
 from enum import IntEnum, Enum
 import functools
 from config.modbus_config import region_setting
+from util.db_connection import db_instance
+from models import Station2
 
 class ADDR_ROBOT_STATUS(IntEnum):
     GET = 100
@@ -62,17 +64,6 @@ in_region_fetch  = functools.partial(in_region, ADDR_REGION_START_FETCH, ADDR_RE
 
 
 def region_addr_to_region_name(addr):
-    if in_region_enter(addr):
-        return "入柜区"
-    elif in_region_scan(addr):
-        return "扫码区"
-    elif in_region_cold(addr):
-        return "冷藏区"
-    elif in_region_rewarm(addr):
-        return "回温区"
-    elif in_region_wait(addr):
-        return "待取区"
-    elif in_region_fetch(addr):
-        return "取料区"
-    else:
-        return "未知"
+    with db_instance.get_session() as db_session:
+        region = db_session.query(Station2.Region).filter(Station2.StationID == addr).scalar()
+        return region if region else "未知"

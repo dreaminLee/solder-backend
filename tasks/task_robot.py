@@ -6,18 +6,18 @@ from modbus.modbus_addresses import ADDR_ROBOT_STATUS, ADDR_ROBOT_CONFIRM
 from modbus.modbus_addresses import region_addr_to_region_name
 from modbus.modbus_addresses import in_region_cold, in_region_rewarm, in_region_wait
 from util.logger import logger
-from models import SolderModel, Station, Solder, SolderStatus
+from models import SolderModel, Station2, Solder, SolderStatus
 from util.db_connection import db_instance
 
 
 def task_robot_impl(robot_get, robot_put, robot_act):
     with db_instance.get_session() as db_session:
 
-        stations = db_session.query(Station).all()
-        StaType_station_dict = {station.StaType: station.StationID for station in stations} # 移动模组[id]: 点位地址
+        stations = db_session.query(Station2).all()
+        move_id_addr = {station.MoveID: station.StationID for station in stations} # 移动模组[id]: 点位地址
 
-        station_get = StaType_station_dict.get(f"移动模组[{robot_get}]")
-        station_put = StaType_station_dict.get(f"移动模组[{robot_put}]")
+        station_get = move_id_addr.get(robot_get)
+        station_put = move_id_addr.get(robot_put)
         station_get_status = modbus_client.modbus_read("jcq", station_get, 1)[0] if station_get else -1
         station_put_status = modbus_client.modbus_read("jcq", station_put, 1)[0] if station_put else -1
         logger.info(f"机械臂状态 move_id_get:{robot_get} move_id_put:{robot_put} action:{robot_act}")
