@@ -300,20 +300,6 @@ def add_model():
     if_back_after_jiaoban = data.get("if_back_after_jiaoban")
     twice_chaoshi_jinzhi_in_binggui = data.get("twice_chaoshi_jinzhi_in_binggui")
     twice_in_ku = data.get("twice_in_ku")
-    # 新增字段获取逻辑
-    separator = data.get("separator")
-    model_start = data.get("model_start")
-    model_separator_start = data.get("model_separator_start")
-    model_length = data.get("model_length")
-    production_date_start = data.get("production_date_start")
-    production_date_separator_start = data.get("production_date_separator_start")
-    production_date_length = data.get("production_date_length")
-    shelf_life_start = data.get("shelf_life_start")
-    shelf_life_separator_start = data.get("shelf_life_separator_start")
-    shelf_life_length = data.get("shelf_life_length")
-    expiration_date_start = data.get("expiration_date_start")
-    expiration_date_separator_start = data.get("expiration_date_separator_start")
-    expiration_date_length = data.get("expiration_date_length")
     modify_datetime = datetime.now()
 
     # 验证必要参数
@@ -352,20 +338,6 @@ def add_model():
             TwiceChaoshiJinzhiInBinggui=twice_chaoshi_jinzhi_in_binggui,
             TwiceInKu=twice_in_ku,
             ModifyDateTime=modify_datetime,
-            # 新增字段添加到实例中
-            Separator=separator,
-            ModelStart=model_start,
-            ModelSeparatorStart=model_separator_start,
-            ModelLength=model_length,
-            ProductionDateStart=production_date_start,
-            ProductionDateSeparatorStart=production_date_separator_start,
-            ProductionDateLength=production_date_length,
-            ShelfLifeStart=shelf_life_start,
-            ShelfLifeSeparatorStart=shelf_life_separator_start,
-            ShelfLifeLength=shelf_life_length,
-            ExpirationDateStart=expiration_date_start,
-            ExpirationDateSeparatorStart=expiration_date_separator_start,
-            ExpirationDateLength=expiration_date_length,
         )
 
         session.add(solder_model)

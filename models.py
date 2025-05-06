@@ -52,7 +52,7 @@ class Alarm(db.Model):
             'end_time': self.EndTime,
             'kind':self.Kind
         }
-#模式预约表
+# 模式预约表
 class Order(db.Model):
     __tablename__ = 'order'
     ID = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -282,4 +282,22 @@ class Station(db.Model):
             'disabled': self.Disabled,
             'solder_code': self.SolderCode,
             'modify_datetime': self.ModifyDateTime
+        }
+
+
+class Station2(db.Model):
+    __tablename__ = "station2"
+
+    _id = db.Column(db.Integer, primary_key=True)
+    MoveID = db.Column(db.Integer)
+    StationID = db.Column(db.Integer)
+    Region = db.Column(db.String())
+    Comment = db.Column(db.String())
+
+    def to_dict(self):
+        return {
+            "move_id": self.MoveID,
+            "address": self.StationID,
+            "region": self.Region,
+            "comment": self.Comment,
         }
