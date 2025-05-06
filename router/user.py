@@ -52,7 +52,7 @@ def login():
 
     access_token = create_access_token(
         identity=mysqlAdminDO.UserID,
-        expires_delta=timedelta(seconds= 60),
+        expires_delta=timedelta(seconds=1800),
         additional_claims={'user_id': mysqlAdminDO.UserID}
     )
     access_token = f"Bearer {access_token}"
@@ -243,7 +243,7 @@ def face_detect():
         mysqlAdminDO = db_instance.get_session().query(User).filter_by(UserID=user_id).first()
         access_token = create_access_token(
             identity=mysqlAdminDO.UserID,
-            expires_delta=timedelta(seconds=60),
+            expires_delta=timedelta(seconds=1800),
             additional_claims={'user_id': mysqlAdminDO.UserID}
         )
         access_token = f"Bearer {access_token}"
