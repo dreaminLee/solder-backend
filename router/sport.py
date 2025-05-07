@@ -160,51 +160,45 @@ def set_sport():
     if not action or not tag:
         return Response.FAIL("参数缺失")
 
-    if c_a_dict[action] == 573:
-        from sqlalchemy import or_
+    if tag not in [1, 2]:
+        return Response.FAIL("未知的 tag 类型")
 
-        session = db_instance.get_session()
-        # 查询 Solder 表中 StationID 在 601 到 660 或 801 到 840 之间的数据
-        solder_records = (
-            session.query(Solder)
-            .filter(
-                or_(
-                    Solder.StationID.between(601, 660),
-                    Solder.StationID.between(801, 840),
-                )
-            )
-            .all()
-        )
-        session.close()
-        # 遍历查询结果并执行操作
-        for solder in solder_records:
-            modbus_client.modbus_write("jcq", 5, int(solder.StationID), 1)
-    # 检查是否是 tag=1 的请求
-    if tag == 1:
+    # if c_a_dict[action] == 573:
+    #     from modbus.modbus_addresses import (
+    #         ADDR_REGION_START_REWARM,
+    #         ADDR_REGION_END_REWARM,
+    #         ADDR_REGION_START_WAIT,
+    #         ADDR_REGION_END_WAIT,
+    #     )
+    #     from sqlalchemy import or_
 
-        # 立即执行 tag=1 的操作
-        write_value = [True]
-        coil_status = modbus_client.modbus_write(
-            "xq", write_value, int(c_a_dict[action]), 1
-        )
+    #     session = db_instance.get_session()
+    #     # 查询 Solder 表中 StationID 在 601 到 660 或 801 到 840 之间的数据
+    #     solder_records = (
+    #         session.query(Solder)
+    #         .filter(
+    #             or_(
+    #                 Solder.StationID.between(ADDR_REGION_START_REWARM, ADDR_REGION_END_REWARM),
+    #                 Solder.StationID.between(ADDR_REGION_START_WAIT,   ADDR_REGION_END_WAIT),
+    #             )
+    #         )
+    #         .all()
+    #     )
+    #     session.close()
+    #     # 遍历查询结果并执行操作
+    #     for solder in solder_records:
+    #         modbus_client.modbus_write("jcq", 5, int(solder.StationID), 1)
 
-        if not coil_status:
-            return Response.FAIL("操作错误")
-        return Response.SUCCESS(write_value)
+    #     return Response.SUCCESS("一键冷藏设置完成")
 
-    # 检查是否是 tag=2 的请求
-    elif tag == 2:
+    write_value = [tag == 1]
+    coil_status = modbus_client.modbus_write(
+        "xq", write_value, int(c_a_dict[action]), 1
+    )
 
-        write_value = [False]
-        coil_status = modbus_client.modbus_write(
-            "xq", write_value, int(c_a_dict[action]), 1
-        )
-
-        if not coil_status:
-            return Response.FAIL("操作错误")
-        return Response.SUCCESS(write_value)
-
-    return Response.FAIL("未知的 tag 类型")
+    if not coil_status:
+        return Response.FAIL("操作错误")
+    return Response.SUCCESS(write_value)
 
 
 def handle_auto_tag2(action):
@@ -291,17 +285,7 @@ def tuned_control():
     if not result:
         return Response.FAIL("操作错误")
     else:
-        location_data = {
-            "x_location": modbus_client.read_float(708),
-            "x_speed": modbus_client.read_float(710),
-            "y_location": modbus_client.read_float(712),
-            "y_speed": modbus_client.read_float(714),
-            "z_location": modbus_client.read_float(716),
-            "z_speed": modbus_client.read_float(718),
-            "r_location": modbus_client.read_float(720),
-            "r_speed": modbus_client.read_float(722),
-        }
-        return Response.SUCCESS(location_data)
+        return Response.SUCCESS()
 
 
 @sport_bp.route("/tuned_operate", methods=["POST"])
