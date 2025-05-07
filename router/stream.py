@@ -288,7 +288,8 @@ def read_location_data():
         "x_location": round(modbus_client.read_float(708), 2),
         "y_location": round(modbus_client.read_float(712), 2),
         "z_location": round(modbus_client.read_float(716), 2),
-        "r_location": round(modbus_client.read_float(720), 2),
+        "r1_location": round(modbus_client.read_float(720), 2),
+        "r2_location": round(modbus_client.read_float(728), 2),
     }
 
 
@@ -297,7 +298,8 @@ def read_speed_data():
         "x_speed": round(modbus_client.read_float(710), 2),
         "y_speed": round(modbus_client.read_float(714), 2),
         "z_speed": round(modbus_client.read_float(718), 2),
-        "r_speed": round(modbus_client.read_float(722), 2),
+        "r1_speed": round(modbus_client.read_float(722), 2),
+        "r2_speed": round(modbus_client.read_float(730), 2),
     }
 
 
