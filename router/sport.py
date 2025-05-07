@@ -456,3 +456,58 @@ def output_open():
             return Response.SUCCESS(write_value)
         else:
             return Response.FAIL()
+
+
+regions_props_addrs_dict = {
+    "入柜区": {
+        "水平距离": 1550,
+        "竖直距离": 1552,
+    },
+    "冷藏区": {
+        "水平距离": 1554,
+        "竖直距离": 1556,
+        "区1角度": 1566,
+        "区2角度": 1568,
+    },
+    "回温区": {
+        "水平距离": 1558,
+        "竖直距离": 1560,
+    },
+    "待取区": {
+        "水平距离": 1562,
+        "竖直距离": 1564,
+    },
+}
+
+
+@sport_bp.route("/region_prop", methods=["POST", "GET"])
+def region_prop():
+    if request.method == "POST":
+        data = request.get_json()
+        region = data.get("region")
+        prop = data.get("prop")
+        value = data.get("value")
+
+        if not region or not prop:
+            return Response.FAIL(
+                f"参数缺失 region: {region}; prop: {prop}; value: {value};"
+            )
+
+        with lock:
+            addr = regions_props_addrs_dict.get(region, {}).get(prop, -1)
+
+            if addr == -1:
+                return Response.FAIL(
+                    f"参数错误 region: {region}; prop: {prop}; value: {value};"
+                )
+
+            res = modbus_client.write_float(value, addr)
+            if not res:
+                return Response.FAIL(
+                    f"写寄存器失败 region: {region}; prop: {prop}; value: {value};"
+                )
+
+            return Response.SUCCESS(value)
+
+    elif request.method == "GET":
+        return Response.SUCCESS()
