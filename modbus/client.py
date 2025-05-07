@@ -67,35 +67,30 @@ class ModbusClientSingleton:
 
     def modbus_write(self, type: str, content, address: int, count: int, slave=0):
         """向寄存器或线圈写入数据"""
-        try:
-            if type == "jcq":
-                for register_address in range(address, address + count):
-                    value_to_send = content
+        if type == "jcq":
+            for register_address in range(address, address + count):
+                value_to_send = content
 
-                    result = self._client.write_register(
-                        register_address, value_to_send, slave=slave)
-
-                    if result.isError():
-                        logging.error(f"写入寄存器 {register_address} 失败: {result}")
-                return True
-
-            else:
-                # 向多个线圈写入数据
-                coils_to_send = content
-                result = self._client.write_coils(
-                    address, coils_to_send, slave=slave)
+                result = self._client.write_register(
+                    register_address, value_to_send, slave=slave)
 
                 if result.isError():
-                    logging.error(f"写入线圈 {address} 失败: {result}")
+                    logging.error(f"写入寄存器 {register_address} 失败: {result}")
                     return False
-                else:
-                    return True
-
-        except Exception as e:
-            logging.error(f"写入失败: {e}")
-            return False
-        finally:
             return True
+
+        else:
+            # 向多个线圈写入数据
+            coils_to_send = content
+            result = self._client.write_coils(
+                address, coils_to_send, slave=slave)
+
+            if result.isError():
+                logging.error(f"写入线圈 {address} 失败: {result}")
+                return False
+            else:
+                return True
+
 
     def write_ascii_string(self, register_address: int, input_string: str):
         """
@@ -137,7 +132,7 @@ class ModbusClientSingleton:
             address, count=2, slave=1)
 
         if result.isError():
-            logging.error("读取寄存器失败！")
+            logging.error(f"读取寄存器失败 addr: {address}")
         else:
             # 将寄存器值转换为字节（每个寄存器是 2 字节，16 位）
             # `struct.pack` 将整数转换为二进制字节
@@ -295,9 +290,7 @@ class ModbusClientSingleton:
     def write_float(self, float_v: float, add: int):
         byte_data = struct.pack('>f', float_v)
         register1, register0 = struct.unpack('>HH', byte_data)
-        modbus_client.modbus_write('jcq', register0, int(add), 1)
-        modbus_client.modbus_write('jcq', register1, int(add+1), 1)
-        return True
+        return all([modbus_client.modbus_write('jcq', register0, int(add), 1), modbus_client.modbus_write('jcq', register1, int(add+1), 1)])
 
     """
         读一片连续的保持寄存器
