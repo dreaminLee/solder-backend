@@ -20,6 +20,15 @@ from util.db_connection import db_instance
 from models import Station, Solder
 import util.global_args
 
+from modbus.modbus_addresses import (
+    ADDR_REGION_START_COLD,
+    ADDR_REGION_END_COLD,
+    ADDR_REGION_START_REWARM,
+    ADDR_REGION_END_REWARM,
+    ADDR_REGION_START_WAIT,
+    ADDR_REGION_END_WAIT,
+)
+
 stream_bp = Blueprint("stream", __name__)
 
 # @stream_bp.route('/timeStream')
@@ -81,32 +90,32 @@ def get_storage_station():
                 # 查询冷藏区数量
                 cold_storage_count = (
                     session.query(Solder)
-                    .filter(Solder.StationID.between(201, 539))
+                    .filter(Solder.StationID.between(ADDR_REGION_START_COLD, ADDR_REGION_END_COLD))
                     .count()
                 )
 
                 # 冷藏容量是固定值
-                cold_storage_capacity = 539 - 201 + 1  # 339
+                cold_storage_capacity = ADDR_REGION_END_COLD - ADDR_REGION_START_COLD + 1  # 339
 
                 # 查询回温区数量
                 warm_storage_count = (
                     session.query(Solder)
-                    .filter(Solder.StationID.between(601, 660))
+                    .filter(Solder.StationID.between(ADDR_REGION_START_REWARM, ADDR_REGION_END_REWARM))
                     .count()
                 )
 
                 # 回温容量是固定值
-                warm_storage_capacity = 660 - 601 + 1  # 60
+                warm_storage_capacity = ADDR_REGION_END_REWARM - ADDR_REGION_START_REWARM + 1  # 60
 
                 # 查询待取区数量
                 waiting_pickup_count = (
                     session.query(Solder)
-                    .filter(Solder.StationID.between(801, 870))
+                    .filter(Solder.StationID.between(ADDR_REGION_START_WAIT, ADDR_REGION_END_WAIT))
                     .count()
                 )
 
                 # 待取容量是固定值
-                waiting_pickup_capacity = 870 - 801 + 1  # 70
+                waiting_pickup_capacity = ADDR_REGION_END_WAIT - ADDR_REGION_START_WAIT + 1  # 70
                 session.close()
                 # 判断数据是否变化
                 if (
