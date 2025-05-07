@@ -510,4 +510,10 @@ def region_prop():
             return Response.SUCCESS(value)
 
     elif request.method == "GET":
-        return Response.SUCCESS()
+        res_dict = {
+            region: {
+                prop: f"{modbus_client.read_float(addr):.2f}" for prop, addr in props.items()
+            }
+            for region, props in regions_props_addrs_dict.items()
+        }
+        return Response.SUCCESS(res_dict)
