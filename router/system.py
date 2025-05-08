@@ -299,3 +299,27 @@ def read_mode():
             return Response.SUCCESS(int(mode))
     except FileNotFoundError:
         return Response.FAIL(-1)  # 如果文件不存在，默认返回 -1
+
+
+@system_bp.route("/device_model", methods=["GET", "POST"])
+def device_model():
+
+    if request.method == "GET":
+        with lock:
+            res = modbus_client.modbus_read("jcq", 108, 1)
+            if not res:
+                return Response.FAIL("读寄存器失败")
+            return Response.SUCCESS({"model": res[0]})
+
+    elif request.method == "POST":
+        data = request.get_json()
+        model = data.get("model")
+
+        if model is None:
+            return Response.FAIL(f"参数缺失 model: {model}")
+
+        res = modbus_client.modbus_write("jcq", model, 108, 1)
+        if not res:
+            return Response.FAIL(f"写寄存器失败 model: {model}")
+
+        return Response.SUCCESS({"model": model})
