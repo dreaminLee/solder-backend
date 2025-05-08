@@ -42,28 +42,25 @@ class ModbusClientSingleton:
 
     def modbus_read(self, type: str, address: int, count: int, slave=0):
         """读取寄存器或线圈"""
-        try:
-            if type == "jcq":
-                result = self._client.read_holding_registers(
-                    address, count=count, slave=slave)
+        if type == "jcq":
+            result = self._client.read_holding_registers(
+                address, count=count, slave=slave)
 
-                if result.isError():
-                    logging.error(f"读取寄存器失败: {result}")
-                else:
-                    return result.registers
+            if result.isError():
+                logging.error(f"读取寄存器失败: {result}")
             else:
-                # 读取线圈的状态
-                result = self._client.read_coils(
-                    address, count=count, slave=slave)
+                return result.registers
+        else:
+            # 读取线圈的状态
+            result = self._client.read_coils(
+                address, count=count, slave=slave)
 
-                if result.isError():
-                    logging.error(f"读取线圈失败: {result}")
-                else:
-                    coil_status = result.bits
-                    return coil_status[:count]
+            if result.isError():
+                logging.error(f"读取线圈失败: {result}")
+            else:
+                coil_status = result.bits
+                return coil_status[:count]
 
-        except Exception as e:
-            logging.error(f"读取失败: {e}")
 
     def modbus_write(self, type: str, content, address: int, count: int, slave=0):
         """向寄存器或线圈写入数据"""
