@@ -18,6 +18,7 @@ dependencies = [
     "pyserial>=3.5",
     "requests>=2.32.3",
     "sqlalchemy>=2.0.40",
+    "pyjwt<=2.9.0",
 ]
 
 [dependency-groups]
