@@ -1,7 +1,7 @@
 from datetime import datetime
 import logging
 import traceback
-
+import functools
 
 from flask_apscheduler import APScheduler
 from time import sleep
@@ -40,7 +40,7 @@ def read_mode():
         return -1  # 如果文件不存在，默认返回 -1
 
 
-def run_scheduler():
+def task_main():
     mode = read_mode()
     if mode == 0:
         task_robot()
@@ -53,28 +53,36 @@ def run_scheduler():
 
 
 def infinite_loop(func, interval=1):
-    while True:
-        sleep(interval)
-        try:
-            func()
-        except Exception as exc:
-            logger.error(traceback.format_exc())
+    def loop():
+        while True:
+            sleep(interval)
+            try:
+                func()
+            except Exception as exc:
+                logger.error(traceback.format_exc())
+
+    return loop
 
 
 def init_scheduler(app):
     scheduler.init_app(app)
     scheduler.add_job(
-        id="task_heartbeat", func=task_heartbeat, trigger="interval", seconds=1
-    )
-    scheduler.add_job(
-        id="run_scheduler",
-        func=infinite_loop,
-        args=(run_scheduler,),
+        id="task_heartbeat",
+        func=infinite_loop(task_heartbeat),
         trigger="date",
         next_run_time=datetime.now(),
     )
     scheduler.add_job(
-        id="task_monitor", func=task_monitor, trigger="interval", seconds=0.5
+        id="task_main",
+        func=infinite_loop(task_main),
+        trigger="date",
+        next_run_time=datetime.now(),
+    )
+    scheduler.add_job(
+        id="task_monitor",
+        func=infinite_loop(task_monitor, 0.5),
+        trigger="date",
+        next_run_time=datetime.now(),
     )
     if not scheduler.running:
         # 确保调度器正在运行，如果不是可以重启调度器或处理该情况
