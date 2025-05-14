@@ -4,6 +4,9 @@ import struct
 import time
 from pymodbus.client import ModbusTcpClient
 from pymodbus.client.mixin import ModbusClientMixin
+import functools
+import threading
+from contextlib import ExitStack, contextmanager
 import re
 from time import sleep
 
@@ -17,30 +20,55 @@ logging.basicConfig(level=logging.INFO)
 class ModbusClientSingleton:
     _instance = None
     _client: ModbusTcpClient = None
+    _lock: threading.Lock = None
 
     def __new__(cls, host=tcp_host, port=tcp_port):
         """创建单例客户端，并在创建时自动连接设备"""
         if cls._instance is None:
             cls._instance = super(ModbusClientSingleton, cls).__new__(cls)
             cls._instance._client = ModbusTcpClient(host=host, port=port)
-            if cls._instance._client.connect():
-                logging.info(f"成功连接到设备 {tcp_host}:{tcp_port}")
-            else:
-                logging.error(f"无法连接到设备 {tcp_host}:{tcp_port}")
+        if cls._lock is None:
+            cls._instance._lock = threading.Lock()
         return cls._instance
 
-    def disconnect(self):
-        """断开连接"""
-        if self._client.is_socket_open():
-            self._client.close()
-            logging.info("断开与设备的连接")
-        else:
-            logging.warning("连接已经关闭，无需再次断开")
+    @contextmanager
+    def _get_lock(self):
+        try:
+            self._lock.acquire()
+            yield
+        finally:
+            self._lock.release()
 
-    def is_connected(self):
-        """检查是否已连接"""
-        return self._client.is_socket_open()
+    @contextmanager
+    def _get_conn(self):
+        if not self._client.connected:
+            logger.info(f"未连接, 开始连接 {tcp_host}:{tcp_port}")
+            if not self._client.connect():
+                raise ConnectionError(f"无法连接到设备 {tcp_host}:{tcp_port}")
+            logging.info(f"成功连接到设备 {tcp_host}:{tcp_port}")
+        yield
 
+    def modbus_conn(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kw):
+            try:
+                with ExitStack() as stack:
+                    stack.enter_context(self._get_lock())
+                    stack.enter_context(self._get_conn())
+                    res = func(self, *args, **kw)
+
+                    if res is None:
+                        raise ConnectionError("modbus读写失败")
+
+                    return res
+            except ConnectionError as conn_err:
+                self._client.close()
+                raise conn_err
+            except Exception as exc:
+                raise exc
+        return wrapper
+
+    @modbus_conn
     def modbus_read(self, type: str, address: int, count: int, slave=0):
         """读取寄存器或线圈"""
         if type == "jcq":
@@ -62,7 +90,7 @@ class ModbusClientSingleton:
                 coil_status = result.bits
                 return coil_status[:count]
 
-
+    @modbus_conn
     def modbus_write(self, type: str, content, address: int, count: int, slave=0):
         """向寄存器或线圈写入数据"""
         if type == "jcq":
@@ -124,6 +152,7 @@ class ModbusClientSingleton:
             logging.error("写入寄存器时发生异常: %s", e)
             return False
 
+    @modbus_conn
     def read_float(self, addr):
         result = self._client.read_holding_registers(
             addr, count=2, slave=1)
@@ -280,6 +309,7 @@ class ModbusClientSingleton:
             logging.error("写入寄存器时发生异常: %s", e)
             return False
 
+    @modbus_conn
     def write_float(self, float_v: float, addr: int):
         res = self._client.write_registers(
             addr,
@@ -296,6 +326,7 @@ class ModbusClientSingleton:
         读一片连续的保持寄存器
     """
 
+    @modbus_conn
     def read_region(self, region_start, region_len, slave=0):
         bulk_len = 100
         read_addr = region_start
@@ -316,6 +347,7 @@ class ModbusClientSingleton:
         写一片连续的保持寄存器
     """
 
+    @modbus_conn
     def write_region(self, region_start, content, slave=0):
         bulk_len = 100
         write_addr = region_start
