@@ -3,6 +3,7 @@ import random
 import struct
 import time
 from pymodbus.client import ModbusTcpClient
+from pymodbus.client.mixin import ModbusClientMixin
 import re
 from time import sleep
 
@@ -123,21 +124,16 @@ class ModbusClientSingleton:
             logging.error("写入寄存器时发生异常: %s", e)
             return False
 
-    def read_float(self, address):
-        address = int(address)
+    def read_float(self, addr):
         result = self._client.read_holding_registers(
-            address, count=2, slave=1)
+            addr, count=2, slave=1)
 
         if result.isError():
-            logging.error(f"读取寄存器失败 addr: {address}")
+            logging.error(f"读取寄存器失败 addr: {addr}")
         else:
-            # 将寄存器值转换为字节（每个寄存器是 2 字节，16 位）
-            # `struct.pack` 将整数转换为二进制字节
-            # 以大端序方式将两个寄存器的数据转换为字节
-            byte_data = struct.pack(
-                '>HH', result.registers[1], result.registers[0])
-            float_v = struct.unpack('>f', byte_data)[0]
-            return float_v
+            return ModbusClientMixin.convert_from_registers(
+                result.registers, ModbusClientMixin.DATATYPE.FLOAT32, "little"
+            )
 
     def read_float_test(self, start_address, end_address):
         start_address = int(start_address)
@@ -284,10 +280,17 @@ class ModbusClientSingleton:
             logging.error("写入寄存器时发生异常: %s", e)
             return False
 
-    def write_float(self, float_v: float, add: int):
-        byte_data = struct.pack('>f', float_v)
-        register1, register0 = struct.unpack('>HH', byte_data)
-        return all([modbus_client.modbus_write('jcq', register0, int(add), 1), modbus_client.modbus_write('jcq', register1, int(add+1), 1)])
+    def write_float(self, float_v: float, addr: int):
+        res = self._client.write_registers(
+            addr,
+            ModbusClientMixin.convert_to_registers(
+                float_v, ModbusClientMixin.DATATYPE.FLOAT32, "little"
+            ),
+            slave=0,
+        )
+        if res.isError():
+            return False
+        return True
 
     """
         读一片连续的保持寄存器
