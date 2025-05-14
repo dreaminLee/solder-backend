@@ -101,3 +101,5 @@ def task_monitor():
                 stat_last.update(stat_now)
 
                 return
+
+        logger.info("锡膏记录未变化")
