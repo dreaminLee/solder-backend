@@ -77,8 +77,9 @@ class ModbusClientSingleton:
 
             if result.isError():
                 logging.error(f"读取寄存器失败: {result}")
-            else:
-                return result.registers
+                return None
+
+            return result.registers
         else:
             # 读取线圈的状态
             result = self._client.read_coils(
@@ -86,9 +87,10 @@ class ModbusClientSingleton:
 
             if result.isError():
                 logging.error(f"读取线圈失败: {result}")
-            else:
-                coil_status = result.bits
-                return coil_status[:count]
+                return None
+
+            coil_status = result.bits
+            return coil_status[:count]
 
     @modbus_conn
     def modbus_write(self, type: str, content, address: int, count: int, slave=0):
@@ -102,8 +104,9 @@ class ModbusClientSingleton:
 
                 if result.isError():
                     logging.error(f"写入寄存器 {register_address} 失败: {result}")
-                    return False
-            return True
+                    return None
+
+            return content
 
         else:
             # 向多个线圈写入数据
@@ -113,9 +116,9 @@ class ModbusClientSingleton:
 
             if result.isError():
                 logging.error(f"写入线圈 {address} 失败: {result}")
-                return False
-            else:
-                return True
+                return None
+
+            return True
 
 
     def write_ascii_string(self, register_address: int, input_string: str):
@@ -159,10 +162,11 @@ class ModbusClientSingleton:
 
         if result.isError():
             logging.error(f"读取寄存器失败 addr: {addr}")
-        else:
-            return ModbusClientMixin.convert_from_registers(
-                result.registers, ModbusClientMixin.DATATYPE.FLOAT32, "little"
-            )
+            return None
+
+        return ModbusClientMixin.convert_from_registers(
+            result.registers, ModbusClientMixin.DATATYPE.FLOAT32, "little"
+        )
 
     def read_float_test(self, start_address, end_address):
         start_address = int(start_address)
@@ -319,8 +323,9 @@ class ModbusClientSingleton:
             slave=0,
         )
         if res.isError():
-            return False
-        return True
+            return None
+
+        return float_v
 
     """
         读一片连续的保持寄存器
@@ -334,8 +339,13 @@ class ModbusClientSingleton:
 
         while region_len:
             # print(f"{read_addr}: {bulk_len if bulk_len <= region_len else region_len}")
-            bulk = self._client.read_holding_registers(
-                read_addr, count=bulk_len if bulk_len <= region_len else region_len, slave=slave).registers
+            read = self._client.read_holding_registers(
+                read_addr, count=bulk_len if bulk_len <= region_len else region_len, slave=slave)
+
+            if read.isError():
+                return None
+
+            bulk = read.registers
             res += bulk
             # print(len(res))
             region_len -= len(bulk)
@@ -356,9 +366,15 @@ class ModbusClientSingleton:
         while nums_written < len(content):
             resp = self._client.write_registers(
                 write_addr, content[nums_written:nums_written+bulk_len], slave=slave)
-            sleep(0.01)
+            
+            if resp.isError():
+                return None
+
             nums_written += bulk_len
             write_addr += bulk_len
+            sleep(0.01)
+        
+        return content
 
 
 modbus_client = ModbusClientSingleton()
